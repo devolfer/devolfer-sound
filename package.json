@@ -1,0 +1,13 @@
+{
+  "name": "com.devolfer.sound",
+  "version": "1.0.0",
+  "displayName": "devolfer Sound",
+  "description": "A lean sound manager that allows simple playback of sounds.",
+  "unity": "2022.3",
+  "author": 
+  {
+    "name": "devolfer",
+    "email": "devolfer05@gmail.com",
+    "url": "https://github.com/devolfer"
+  }
+}

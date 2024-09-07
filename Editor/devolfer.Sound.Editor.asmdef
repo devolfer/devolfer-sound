@@ -1,0 +1,18 @@
+{
+    "name": "devolfer.Sound.Editor",
+    "rootNamespace": "devolfer.Sound",
+    "references": [
+        "GUID:3fb4bfdcec4de4556954d5ebd6a5f93d"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
