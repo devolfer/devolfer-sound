@@ -16,7 +16,9 @@ namespace devolfer.Sound
         private AudioSource _source;
 
         private Coroutine _playRoutine;
+        private Coroutine _fadeRoutine;
         private WaitWhile _waitWhilePlayingOrPaused;
+        private WaitWhile _waitWhilePaused;
 
         private bool _setup;
         private bool _paused;
@@ -29,7 +31,9 @@ namespace devolfer.Sound
             if (!TryGetComponent(out _source)) _source = gameObject.AddComponent<AudioSource>();
 
             _playRoutine = null;
+            _fadeRoutine = null;
             _waitWhilePlayingOrPaused = new WaitWhile(() => Playing || Paused);
+            _waitWhilePaused = new WaitWhile(() => Paused);
 
             _setup = true;
         }
@@ -83,12 +87,36 @@ namespace devolfer.Sound
                 _manager.StopCoroutine(_playRoutine);
                 _playRoutine = null;
             }
+            
+            if (_fadeRoutine != null)
+            {
+                _manager.StopCoroutine(_fadeRoutine);
+                _fadeRoutine = null;
+            }
 
             _source.Stop();
             _paused = false;
             _transform.position = default;
 
             _properties.ResetOn(ref _source);
+        }
+
+        internal void Fade(float duration, float targetVolume, Ease ease = Ease.Linear)
+        {
+            if (!_setup) return;
+            
+            if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
+            
+            _fadeRoutine = _manager.StartCoroutine(FadeRoutine());
+
+            return;
+
+            IEnumerator FadeRoutine()
+            {
+                yield return SoundManager.Fade(_source, duration, targetVolume, ease, _waitWhilePaused);
+
+                _fadeRoutine = null;
+            }
         }
     }
 }

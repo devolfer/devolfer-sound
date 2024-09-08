@@ -1,11 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO FadeIn/Out in general
+    // TODO Fade in/out on play/stop by default (optional)
     // TODO Crossfade between audio sources/entities
     // TODO Audio Mixers handling in general
     public class SoundManager : PersistentSingleton<SoundManager>
@@ -48,8 +49,7 @@ namespace devolfer.Sound
 
             _entitiesPlaying.Add(entity);
         }
-
-        // TODO Stop with fade out by default?
+        
         public void Stop(SoundEntity entity)
         {
             if (!_entitiesPlaying.Contains(entity) && !_entitiesPaused.Contains(entity)) return;
@@ -101,6 +101,11 @@ namespace devolfer.Sound
             _entitiesPaused.Clear();
         }
 
+        public void Fade(SoundEntity entity, float duration, float targetVolume, Ease ease = Ease.Linear)
+        {
+            entity.Fade(duration, targetVolume, ease);
+        }
+
         protected override void Setup()
         {
             base.Setup();
@@ -133,6 +138,43 @@ namespace devolfer.Sound
                 defaultCapacity: _poolCapacityDefault);
 
             _pool.PreAllocate(_poolCapacityDefault);
+        }
+        
+        public static IEnumerator Fade(AudioSource audioSource,
+                                       float duration,
+                                       float targetVolume,
+                                       Ease ease = Ease.Linear,
+                                       WaitWhile waitWhilePredicate = null)
+        {
+            return Fade(audioSource, duration, targetVolume, EasingFunctions.GetEasingFunction(ease), waitWhilePredicate);
+        }
+
+        public static IEnumerator Fade(AudioSource audioSource,
+                                       float duration,
+                                       float targetVolume,
+                                       Func<float, float> easeFunction,
+                                       WaitWhile waitWhilePredicate = null)
+        {
+            targetVolume = Mathf.Clamp01(targetVolume);
+            
+            if (duration <= 0)
+            {
+                audioSource.volume = targetVolume;
+                yield break;
+            }
+            
+            float deltaTime = 0;
+            float startVolume = audioSource.volume;
+
+            while (deltaTime < duration)
+            {
+                deltaTime += Time.deltaTime;
+                audioSource.volume = Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration));
+
+                yield return waitWhilePredicate;
+            }
+
+            audioSource.volume = targetVolume;
         }
     }
 

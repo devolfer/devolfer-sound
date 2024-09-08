@@ -94,6 +94,16 @@ namespace devolfer.Sound
             {
                 SoundManager.Instance.ResumeAll();
             }
+            
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                SoundManager.Instance.Fade(_entity, 2, 0, Ease.InOutSine);
+            }
+            
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                SoundManager.Instance.Fade(_entity, 2, 1, Ease.InOutSine);
+            }
         }
     }
 }
