@@ -9,6 +9,7 @@ namespace devolfer.Sound
         private SoundEntity _entity;
         private Transform _transform;
         private bool Playing => _entity != null && _entity.Playing;
+        private bool Paused => _entity != null && _entity.Paused;
 
         private void Awake()
         {
@@ -19,15 +20,31 @@ namespace devolfer.Sound
 
         public void Play()
         {
-            Stop();
+            if (Playing) return;
+
+            if (Paused)
+            {
+                Resume();
+                return;
+            }
 
             _entity = SoundManager.Instance.Play(_source, _transform.position, onPlayEnd: ClearEntity);
         }
 
+        public void Pause()
+        {
+            if (Playing) SoundManager.Instance.Pause(_entity);
+        }
+
+        public void Resume()
+        {
+            if (Paused) SoundManager.Instance.Resume(_entity);
+        }
+
         public void Stop()
         {
-            if (!Playing) return;
-
+            if (!Playing && !Paused) return;
+            
             SoundManager.Instance.Stop(_entity);
 
             ClearEntity();
@@ -46,6 +63,16 @@ namespace devolfer.Sound
             if (Input.GetKeyDown(KeyCode.O))
             {
                 Stop();
+            }
+
+            if (Input.GetKeyDown(KeyCode.I))
+            {
+                Pause();
+            }
+
+            if (Input.GetKeyDown(KeyCode.U))
+            {
+                Resume();
             }
 
             if (Input.GetKeyDown(KeyCode.L))

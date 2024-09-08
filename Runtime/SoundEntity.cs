@@ -7,27 +7,29 @@ namespace devolfer.Sound
     [AddComponentMenu("")]
     public class SoundEntity : MonoBehaviour
     {
-        public bool Playing => _setup && _audioSource.isPlaying;
+        public bool Playing => _setup && _source.isPlaying;
+        public bool Paused => _setup && _paused;
 
         private SoundManager _manager;
         private SoundProperties _properties;
         private Transform _transform;
-        private AudioSource _audioSource;
+        private AudioSource _source;
 
         private Coroutine _playRoutine;
-        private WaitWhile _waitWhilePlaying;
+        private WaitWhile _waitWhilePlayingOrPaused;
 
         private bool _setup;
+        private bool _paused;
 
         internal void Setup(SoundManager manager)
         {
             _manager = manager;
             _properties = new SoundProperties();
             _transform = transform;
-            if (!TryGetComponent(out _audioSource)) _audioSource = gameObject.AddComponent<AudioSource>();
+            if (!TryGetComponent(out _source)) _source = gameObject.AddComponent<AudioSource>();
 
             _playRoutine = null;
-            _waitWhilePlaying = new WaitWhile(() => Playing);
+            _waitWhilePlayingOrPaused = new WaitWhile(() => Playing || Paused);
 
             _setup = true;
         }
@@ -38,7 +40,7 @@ namespace devolfer.Sound
                                   Action onPlayEnd = null)
         {
             _properties = properties;
-            _properties.ApplyOn(ref _audioSource);
+            _properties.ApplyOn(ref _source);
 
             _transform.position = position;
 
@@ -50,9 +52,9 @@ namespace devolfer.Sound
             {
                 onPlayStart?.Invoke();
 
-                _audioSource.Play();
+                _source.Play();
 
-                yield return _waitWhilePlaying;
+                yield return _waitWhilePlayingOrPaused;
 
                 onPlayEnd?.Invoke();
 
@@ -60,6 +62,18 @@ namespace devolfer.Sound
 
                 _playRoutine = null;
             }
+        }
+
+        internal void Pause()
+        {
+            _paused = true;
+            _source.Pause();
+        }
+
+        internal void Resume()
+        {
+            _source.UnPause();
+            _paused = false;
         }
 
         internal void Stop()
@@ -70,10 +84,11 @@ namespace devolfer.Sound
                 _playRoutine = null;
             }
 
-            _audioSource.Stop();
+            _source.Stop();
+            _paused = false;
             _transform.position = default;
 
-            _properties.ResetOn(ref _audioSource);
+            _properties.ResetOn(ref _source);
         }
     }
 }

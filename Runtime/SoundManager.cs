@@ -5,19 +5,18 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO Add Pause/Resume entity method
     // TODO Add PauseAll/ResumeAll entities method
     // TODO Add StopAll entities method
     // TODO FadeIn/Out in general
     // TODO Crossfade between audio sources/entities
-    // TODO Play overload with AudioSource parameter
     // TODO Audio Mixers handling in general
     public class SoundManager : PersistentSingleton<SoundManager>
     {
+        [SerializeField] private int _poolCapacityDefault = 64;
+        
         private ObjectPool<SoundEntity> _pool;
-        private const int PoolCapacityDefault = 64;
-
         private HashSet<SoundEntity> _entitiesPlaying;
+        private HashSet<SoundEntity> _entitiesPaused;
 
         public SoundEntity Play(SoundProperties properties,
                                 Vector3 position = default,
@@ -30,10 +29,32 @@ namespace devolfer.Sound
             return entity.Play(properties, position, onPlayStart, onPlayEnd);
         }
 
+        public void Pause(SoundEntity entity)
+        {
+            if (!_entitiesPlaying.Contains(entity)) return;
+            
+            _entitiesPlaying.Remove(entity);
+
+            entity.Pause();
+            
+            _entitiesPaused.Add(entity);
+        }
+        
+        public void Resume(SoundEntity entity)
+        {
+            if (!_entitiesPaused.Contains(entity)) return;
+            
+            _entitiesPaused.Remove(entity);
+
+            entity.Resume();
+            
+            _entitiesPlaying.Add(entity);
+        }
+
         // TODO Stop with fade out by default?
         public void Stop(SoundEntity entity)
         {
-            if (!_entitiesPlaying.Contains(entity)) return;
+            if (!_entitiesPlaying.Contains(entity) && !_entitiesPaused.Contains(entity)) return;
 
             entity.Stop();
             
@@ -48,6 +69,8 @@ namespace devolfer.Sound
             if (s_instance != this) return;
 
             _entitiesPlaying = new HashSet<SoundEntity>();
+            _entitiesPaused = new HashSet<SoundEntity>();
+            
             CreatePool();
         }
 
@@ -68,9 +91,9 @@ namespace devolfer.Sound
                 actionOnGet: entity => entity.gameObject.SetActive(true),
                 actionOnRelease: entity => entity.gameObject.SetActive(false),
                 actionOnDestroy: entity => Destroy(entity.gameObject),
-                defaultCapacity: PoolCapacityDefault);
+                defaultCapacity: _poolCapacityDefault);
 
-            _pool.PreAllocate(PoolCapacityDefault);
+            _pool.PreAllocate(_poolCapacityDefault);
         }
     }
 
