@@ -33,11 +33,14 @@ namespace devolfer.Sound
         }
 
         internal SoundEntity Play(SoundProperties properties,
+                                  Vector3 position = default,
                                   Action onPlayStart = null,
                                   Action onPlayEnd = null)
         {
             _properties = properties;
             _properties.ApplyOn(ref _audioSource);
+
+            _transform.position = position;
 
             _playRoutine = _manager.StartCoroutine(PlayRoutine());
 
@@ -57,16 +60,6 @@ namespace devolfer.Sound
 
                 _playRoutine = null;
             }
-        }
-
-        internal SoundEntity PlayAtPoint(SoundProperties properties,
-                                         Vector3 position,
-                                         Action onPlayStart = null,
-                                         Action onPlayEnd = null)
-        {
-            _transform.position = position;
-
-            return Play(properties, onPlayStart, onPlayEnd);
         }
 
         internal void Stop()

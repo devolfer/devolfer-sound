@@ -5,6 +5,9 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
+    // TODO Add Pause/Resume entity method
+    // TODO Add PauseAll/ResumeAll entities method
+    // TODO Add StopAll entities method
     // TODO FadeIn/Out in general
     // TODO Crossfade between audio sources/entities
     // TODO Play overload with AudioSource parameter
@@ -17,24 +20,14 @@ namespace devolfer.Sound
         private HashSet<SoundEntity> _entitiesPlaying;
 
         public SoundEntity Play(SoundProperties properties,
+                                Vector3 position = default,
                                 Action onPlayStart = null,
                                 Action onPlayEnd = null)
         {
             SoundEntity entity = _pool.Get();
             _entitiesPlaying.Add(entity);
             
-            return entity.Play(properties, onPlayStart, onPlayEnd);
-        }
-
-        public SoundEntity PlayAtPoint(SoundProperties properties,
-                                       Vector3 worldPosition,
-                                       Action onPlayStart = null,
-                                       Action onPlayEnd = null)
-        {
-            SoundEntity entity = _pool.Get();
-            _entitiesPlaying.Add(entity);
-            
-            return entity.PlayAtPoint(properties, worldPosition, onPlayStart, onPlayEnd);
+            return entity.Play(properties, position, onPlayStart, onPlayEnd);
         }
 
         // TODO Stop with fade out by default?

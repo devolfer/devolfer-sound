@@ -1,10 +1,8 @@
-using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
 namespace devolfer.Sound
 {
-    [Serializable]
     public class SoundProperties
     {
         public AudioClip Clip;

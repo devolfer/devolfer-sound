@@ -7,38 +7,21 @@ namespace devolfer.Sound
     {
         private AudioSource _source;
         private SoundEntity _entity;
+        private Transform _transform;
         private bool Playing => _entity != null && _entity.Playing;
 
         private void Awake()
         {
             _source = GetComponent<AudioSource>();
             _source.enabled = false;
+            _transform = transform;
         }
 
         public void Play()
         {
             Stop();
 
-            _entity = SoundManager.Instance.Play(_source, onPlayEnd: ClearEntity);
-        }
-
-        public void Play2D()
-        {
-            Stop();
-
-            _entity = SoundManager.Instance.Play(
-                new SoundProperties(_source) { SpatialBlend = 0 },
-                onPlayEnd: ClearEntity);
-        }
-
-        public void Play3D()
-        {
-            Stop();
-
-            _entity = SoundManager.Instance.PlayAtPoint(
-                new SoundProperties(_source) { SpatialBlend = 1 },
-                transform.position,
-                onPlayEnd: ClearEntity);
+            _entity = SoundManager.Instance.Play(_source, _transform.position, onPlayEnd: ClearEntity);
         }
 
         public void Stop()
@@ -52,6 +35,7 @@ namespace devolfer.Sound
 
         private void ClearEntity() => _entity = null;
 
+        // TODO Remove these after testing
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.P))
