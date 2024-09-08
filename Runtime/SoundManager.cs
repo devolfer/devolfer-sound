@@ -5,15 +5,13 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO Add PauseAll/ResumeAll entities method
-    // TODO Add StopAll entities method
     // TODO FadeIn/Out in general
     // TODO Crossfade between audio sources/entities
     // TODO Audio Mixers handling in general
     public class SoundManager : PersistentSingleton<SoundManager>
     {
         [SerializeField] private int _poolCapacityDefault = 64;
-        
+
         private ObjectPool<SoundEntity> _pool;
         private HashSet<SoundEntity> _entitiesPlaying;
         private HashSet<SoundEntity> _entitiesPaused;
@@ -25,29 +23,29 @@ namespace devolfer.Sound
         {
             SoundEntity entity = _pool.Get();
             _entitiesPlaying.Add(entity);
-            
+
             return entity.Play(properties, position, onPlayStart, onPlayEnd);
         }
 
         public void Pause(SoundEntity entity)
         {
             if (!_entitiesPlaying.Contains(entity)) return;
-            
+
             _entitiesPlaying.Remove(entity);
 
             entity.Pause();
-            
+
             _entitiesPaused.Add(entity);
         }
-        
+
         public void Resume(SoundEntity entity)
         {
             if (!_entitiesPaused.Contains(entity)) return;
-            
+
             _entitiesPaused.Remove(entity);
 
             entity.Resume();
-            
+
             _entitiesPlaying.Add(entity);
         }
 
@@ -57,9 +55,50 @@ namespace devolfer.Sound
             if (!_entitiesPlaying.Contains(entity) && !_entitiesPaused.Contains(entity)) return;
 
             entity.Stop();
-            
+
             _entitiesPlaying.Remove(entity);
             _pool.Release(entity);
+        }
+
+        public void PauseAll()
+        {
+            foreach (SoundEntity entity in _entitiesPlaying)
+            {
+                entity.Pause();
+                _entitiesPaused.Add(entity);
+            }
+
+            _entitiesPlaying.Clear();
+        }
+
+        public void ResumeAll()
+        {
+            foreach (SoundEntity entity in _entitiesPaused)
+            {
+                entity.Resume();
+                _entitiesPlaying.Add(entity);
+            }
+
+            _entitiesPaused.Clear();
+        }
+
+        public void StopAll()
+        {
+            foreach (SoundEntity entity in _entitiesPlaying)
+            {
+                entity.Stop();
+                _pool.Release(entity);
+            }
+
+            _entitiesPlaying.Clear();
+
+            foreach (SoundEntity entity in _entitiesPaused)
+            {
+                entity.Stop();
+                _pool.Release(entity);
+            }
+
+            _entitiesPaused.Clear();
         }
 
         protected override void Setup()
@@ -70,7 +109,7 @@ namespace devolfer.Sound
 
             _entitiesPlaying = new HashSet<SoundEntity>();
             _entitiesPaused = new HashSet<SoundEntity>();
-            
+
             CreatePool();
         }
 

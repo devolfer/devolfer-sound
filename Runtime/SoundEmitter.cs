@@ -79,6 +79,21 @@ namespace devolfer.Sound
             {
                 SoundManager.Instance.Play(_source);
             }
+            
+            if (Input.GetKeyDown(KeyCode.K))
+            {
+                SoundManager.Instance.StopAll();
+            }
+            
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                SoundManager.Instance.PauseAll();
+            }
+            
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                SoundManager.Instance.ResumeAll();
+            }
         }
     }
 }
