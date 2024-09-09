@@ -42,8 +42,10 @@ namespace devolfer.Sound
         internal SoundEntity Play(SoundProperties properties,
                                   Transform parent = null,
                                   Vector3 position = default,
-                                  Action onPlayStart = null,
-                                  Action onPlayEnd = null)
+                                  bool fadeIn = false,
+                                  float fadeInDuration = .5f,
+                                  Ease fadeInEase = Ease.Linear,
+                                  Action onComplete = null)
         {
             _properties = properties;
             _properties.ApplyOn(ref _source);
@@ -64,13 +66,17 @@ namespace devolfer.Sound
 
             IEnumerator PlayRoutine()
             {
-                onPlayStart?.Invoke();
-
                 _source.Play();
+                
+                if (fadeIn)
+                {
+                    _source.volume = 0;
+                    yield return SoundManager.Fade(_source, fadeInDuration, properties.Volume, fadeInEase);
+                }
 
                 yield return _waitWhilePlayingOrPaused;
 
-                onPlayEnd?.Invoke();
+                onComplete?.Invoke();
 
                 _manager.Stop(this, false);
 

@@ -34,7 +34,7 @@ namespace devolfer.Sound
                 _source,
                 _local ? _transform : null,
                 _local ? Vector3.zero : _transform.position,
-                onPlayEnd: ClearEntity);
+                onComplete: ClearEntity);
         }
 
         public void Pause()
@@ -57,59 +57,5 @@ namespace devolfer.Sound
         }
 
         private void ClearEntity() => _entity = null;
-
-        // TODO Remove these after testing
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.P))
-            {
-                Play();
-            }
-
-            if (Input.GetKeyDown(KeyCode.O))
-            {
-                Stop();
-            }
-
-            if (Input.GetKeyDown(KeyCode.I))
-            {
-                Pause();
-            }
-
-            if (Input.GetKeyDown(KeyCode.U))
-            {
-                Resume();
-            }
-
-            if (Input.GetKeyDown(KeyCode.L))
-            {
-                SoundManager.Instance.Play(_source);
-            }
-
-            if (Input.GetKeyDown(KeyCode.K))
-            {
-                SoundManager.Instance.StopAll();
-            }
-
-            if (Input.GetKeyDown(KeyCode.J))
-            {
-                SoundManager.Instance.PauseAll();
-            }
-
-            if (Input.GetKeyDown(KeyCode.H))
-            {
-                SoundManager.Instance.ResumeAll();
-            }
-
-            if (Input.GetKeyDown(KeyCode.F))
-            {
-                SoundManager.Instance.Fade(_entity, 2, 0, Ease.InOutSine);
-            }
-
-            if (Input.GetKeyDown(KeyCode.D))
-            {
-                SoundManager.Instance.Fade(_entity, 2, 1, Ease.InOutSine);
-            }
-        }
     }
 }

@@ -20,13 +20,15 @@ namespace devolfer.Sound
         public SoundEntity Play(SoundProperties properties,
                                 Transform parent = null,
                                 Vector3 position = default,
-                                Action onPlayStart = null,
-                                Action onPlayEnd = null)
+                                bool fadeIn = false,
+                                float fadeInDuration = .5f,
+                                Ease fadeInEase = Ease.Linear,
+                                Action onComplete = null)
         {
             SoundEntity entity = _pool.Get();
             _entitiesPlaying.Add(entity);
 
-            return entity.Play(properties, parent, position, onPlayStart, onPlayEnd);
+            return entity.Play(properties, parent, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
         }
 
         public void Pause(SoundEntity entity)
