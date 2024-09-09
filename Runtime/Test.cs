@@ -6,6 +6,7 @@ namespace devolfer.Sound
     public class Test : MonoBehaviour
     {
         [SerializeField] private AudioSource _source;
+        [SerializeField] private AudioSource _sourceCrossfade;
         
         [SerializeField] private SoundEmitter _soundEmitter;
 
@@ -39,6 +40,12 @@ namespace devolfer.Sound
             {
                 SoundManager.Instance.Stop(_entity);
                 _entity = null;
+            }
+
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                _entity = SoundManager.Instance.CrossFade(3, _entity, _sourceCrossfade);
+                (_source, _sourceCrossfade) = (_sourceCrossfade, _source);
             }
         }
     }

@@ -6,7 +6,6 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO Crossfade between audio sources/entities
     // TODO Audio Mixers handling in general
     public class SoundManager : PersistentSingleton<SoundManager>
     {
@@ -62,7 +61,7 @@ namespace devolfer.Sound
         {
             bool playingEntity = _entitiesPlaying.Contains(entity);
             bool pausedEntity = _entitiesPaused.Contains(entity);
-            
+
             if (!playingEntity && !pausedEntity) return;
 
             _entitiesStopping.Add(entity);
@@ -74,7 +73,7 @@ namespace devolfer.Sound
                 if (playingEntity) _entitiesPlaying.Remove(entity);
                 if (pausedEntity) _entitiesPaused.Remove(entity);
                 _entitiesStopping.Remove(entity);
-                
+
                 _pool.Release(entity);
             }
         }
@@ -84,7 +83,7 @@ namespace devolfer.Sound
             foreach (SoundEntity entity in _entitiesPlaying)
             {
                 if (_entitiesStopping.Contains(entity)) continue;
-                
+
                 entity.Pause();
                 _entitiesPaused.Add(entity);
             }
@@ -97,7 +96,7 @@ namespace devolfer.Sound
             foreach (SoundEntity entity in _entitiesPaused)
             {
                 if (_entitiesStopping.Contains(entity)) continue;
-                
+
                 entity.Resume();
                 _entitiesPlaying.Add(entity);
             }
@@ -110,19 +109,34 @@ namespace devolfer.Sound
                             Ease fadeOutEase = Ease.Linear)
         {
             foreach (SoundEntity entity in _entitiesPlaying) Stop(entity, fadeOut, fadeOutDuration, fadeOutEase);
-            
+
             foreach (SoundEntity entity in _entitiesPaused)
             {
                 entity.Stop(false);
                 _pool.Release(entity);
             }
-            
+
             _entitiesPaused.Clear();
         }
 
         public void Fade(SoundEntity entity, float duration, float targetVolume, Ease ease = Ease.Linear)
         {
+            if (_entitiesStopping.Contains(entity)) return;
+
+            if (_entitiesPaused.Contains(entity)) Resume(entity);
+
             entity.Fade(duration, targetVolume, ease);
+        }
+
+        public SoundEntity CrossFade(float duration,
+                                     SoundEntity fadeOutEntity,
+                                     SoundProperties fadeInProperties,
+                                     Transform fadeInParent = null,
+                                     Vector3 fadeInPosition = default)
+        {
+            Stop(fadeOutEntity, fadeOutDuration: duration);
+            
+            return Play(fadeInProperties, fadeInParent, fadeInPosition, true, duration);
         }
 
         protected override void Setup()
