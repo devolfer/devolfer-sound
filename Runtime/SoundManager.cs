@@ -18,6 +18,7 @@ namespace devolfer.Sound
         private HashSet<SoundEntity> _entitiesPaused;
 
         public SoundEntity Play(SoundProperties properties,
+                                Transform parent = null,
                                 Vector3 position = default,
                                 Action onPlayStart = null,
                                 Action onPlayEnd = null)
@@ -25,7 +26,7 @@ namespace devolfer.Sound
             SoundEntity entity = _pool.Get();
             _entitiesPlaying.Add(entity);
 
-            return entity.Play(properties, position, onPlayStart, onPlayEnd);
+            return entity.Play(properties, parent, position, onPlayStart, onPlayEnd);
         }
 
         public void Pause(SoundEntity entity)

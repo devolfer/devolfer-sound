@@ -5,6 +5,8 @@ namespace devolfer.Sound
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour
     {
+        [SerializeField] private bool _local;
+
         private AudioSource _source;
         private SoundEntity _entity;
         private Transform _transform;
@@ -28,7 +30,11 @@ namespace devolfer.Sound
                 return;
             }
 
-            _entity = SoundManager.Instance.Play(_source, _transform.position, onPlayEnd: ClearEntity);
+            _entity = SoundManager.Instance.Play(
+                _source,
+                _local ? _transform : null,
+                _local ? Vector3.zero : _transform.position,
+                onPlayEnd: ClearEntity);
         }
 
         public void Pause()
@@ -44,7 +50,7 @@ namespace devolfer.Sound
         public void Stop()
         {
             if (!Playing && !Paused) return;
-            
+
             SoundManager.Instance.Stop(_entity);
 
             ClearEntity();
@@ -79,27 +85,27 @@ namespace devolfer.Sound
             {
                 SoundManager.Instance.Play(_source);
             }
-            
+
             if (Input.GetKeyDown(KeyCode.K))
             {
                 SoundManager.Instance.StopAll();
             }
-            
+
             if (Input.GetKeyDown(KeyCode.J))
             {
                 SoundManager.Instance.PauseAll();
             }
-            
+
             if (Input.GetKeyDown(KeyCode.H))
             {
                 SoundManager.Instance.ResumeAll();
             }
-            
+
             if (Input.GetKeyDown(KeyCode.F))
             {
                 SoundManager.Instance.Fade(_entity, 2, 0, Ease.InOutSine);
             }
-            
+
             if (Input.GetKeyDown(KeyCode.D))
             {
                 SoundManager.Instance.Fade(_entity, 2, 1, Ease.InOutSine);

@@ -39,6 +39,7 @@ namespace devolfer.Sound
         }
 
         internal SoundEntity Play(SoundProperties properties,
+                                  Transform parent = null,
                                   Vector3 position = default,
                                   Action onPlayStart = null,
                                   Action onPlayEnd = null)
@@ -46,7 +47,15 @@ namespace devolfer.Sound
             _properties = properties;
             _properties.ApplyOn(ref _source);
 
-            _transform.position = position;
+            if (parent != null)
+            {
+                _transform.SetParent(parent, false);
+                _transform.localPosition = position;
+            }
+            else
+            {
+                _transform.position = position;
+            }
 
             _playRoutine = _manager.StartCoroutine(PlayRoutine());
 
@@ -87,7 +96,7 @@ namespace devolfer.Sound
                 _manager.StopCoroutine(_playRoutine);
                 _playRoutine = null;
             }
-            
+
             if (_fadeRoutine != null)
             {
                 _manager.StopCoroutine(_fadeRoutine);
@@ -96,7 +105,16 @@ namespace devolfer.Sound
 
             _source.Stop();
             _paused = false;
-            _transform.position = default;
+            
+            if (_transform.parent != _manager.transform)
+            {
+                _transform.SetParent(_manager.transform, false);
+                _transform.localPosition = default;
+            }
+            else
+            {
+                _transform.position = default;
+            }
 
             _properties.ResetOn(ref _source);
         }
@@ -104,9 +122,9 @@ namespace devolfer.Sound
         internal void Fade(float duration, float targetVolume, Ease ease = Ease.Linear)
         {
             if (!_setup) return;
-            
+
             if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
-            
+
             _fadeRoutine = _manager.StartCoroutine(FadeRoutine());
 
             return;
