@@ -6,7 +6,6 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO Fade in/out on play/stop by default (optional)
     // TODO Crossfade between audio sources/entities
     // TODO Audio Mixers handling in general
     public class SoundManager : PersistentSingleton<SoundManager>
@@ -16,6 +15,7 @@ namespace devolfer.Sound
         private ObjectPool<SoundEntity> _pool;
         private HashSet<SoundEntity> _entitiesPlaying;
         private HashSet<SoundEntity> _entitiesPaused;
+        private HashSet<SoundEntity> _entitiesStopping;
 
         public SoundEntity Play(SoundProperties properties,
                                 Transform parent = null,
@@ -32,6 +32,7 @@ namespace devolfer.Sound
         public void Pause(SoundEntity entity)
         {
             if (!_entitiesPlaying.Contains(entity)) return;
+            if (_entitiesStopping.Contains(entity)) return;
 
             _entitiesPlaying.Remove(entity);
 
@@ -43,6 +44,7 @@ namespace devolfer.Sound
         public void Resume(SoundEntity entity)
         {
             if (!_entitiesPaused.Contains(entity)) return;
+            if (_entitiesStopping.Contains(entity)) return;
 
             _entitiesPaused.Remove(entity);
 
@@ -50,21 +52,37 @@ namespace devolfer.Sound
 
             _entitiesPlaying.Add(entity);
         }
-        
-        public void Stop(SoundEntity entity)
+
+        public void Stop(SoundEntity entity,
+                         bool fadeOut = true,
+                         float fadeOutDuration = .5f,
+                         Ease fadeOutEase = Ease.Linear)
         {
-            if (!_entitiesPlaying.Contains(entity) && !_entitiesPaused.Contains(entity)) return;
+            bool playingEntity = _entitiesPlaying.Contains(entity);
+            bool pausedEntity = _entitiesPaused.Contains(entity);
+            
+            if (!playingEntity && !pausedEntity) return;
 
-            entity.Stop();
+            _entitiesStopping.Add(entity);
+            entity.Stop(fadeOut, fadeOutDuration, fadeOutEase, onComplete: ReleaseEntity);
+            return;
 
-            _entitiesPlaying.Remove(entity);
-            _pool.Release(entity);
+            void ReleaseEntity()
+            {
+                if (playingEntity) _entitiesPlaying.Remove(entity);
+                if (pausedEntity) _entitiesPaused.Remove(entity);
+                _entitiesStopping.Remove(entity);
+                
+                _pool.Release(entity);
+            }
         }
 
         public void PauseAll()
         {
             foreach (SoundEntity entity in _entitiesPlaying)
             {
+                if (_entitiesStopping.Contains(entity)) continue;
+                
                 entity.Pause();
                 _entitiesPaused.Add(entity);
             }
@@ -76,6 +94,8 @@ namespace devolfer.Sound
         {
             foreach (SoundEntity entity in _entitiesPaused)
             {
+                if (_entitiesStopping.Contains(entity)) continue;
+                
                 entity.Resume();
                 _entitiesPlaying.Add(entity);
             }
@@ -83,22 +103,18 @@ namespace devolfer.Sound
             _entitiesPaused.Clear();
         }
 
-        public void StopAll()
+        public void StopAll(bool fadeOut = true,
+                            float fadeOutDuration = 1,
+                            Ease fadeOutEase = Ease.Linear)
         {
-            foreach (SoundEntity entity in _entitiesPlaying)
-            {
-                entity.Stop();
-                _pool.Release(entity);
-            }
-
-            _entitiesPlaying.Clear();
-
+            foreach (SoundEntity entity in _entitiesPlaying) Stop(entity, fadeOut, fadeOutDuration, fadeOutEase);
+            
             foreach (SoundEntity entity in _entitiesPaused)
             {
-                entity.Stop();
+                entity.Stop(false);
                 _pool.Release(entity);
             }
-
+            
             _entitiesPaused.Clear();
         }
 
@@ -115,6 +131,7 @@ namespace devolfer.Sound
 
             _entitiesPlaying = new HashSet<SoundEntity>();
             _entitiesPaused = new HashSet<SoundEntity>();
+            _entitiesStopping = new HashSet<SoundEntity>();
 
             CreatePool();
         }
@@ -140,14 +157,19 @@ namespace devolfer.Sound
 
             _pool.PreAllocate(_poolCapacityDefault);
         }
-        
+
         public static IEnumerator Fade(AudioSource audioSource,
                                        float duration,
                                        float targetVolume,
                                        Ease ease = Ease.Linear,
                                        WaitWhile waitWhilePredicate = null)
         {
-            return Fade(audioSource, duration, targetVolume, EasingFunctions.GetEasingFunction(ease), waitWhilePredicate);
+            return Fade(
+                audioSource,
+                duration,
+                targetVolume,
+                EasingFunctions.GetEasingFunction(ease),
+                waitWhilePredicate);
         }
 
         public static IEnumerator Fade(AudioSource audioSource,
@@ -157,13 +179,13 @@ namespace devolfer.Sound
                                        WaitWhile waitWhilePredicate = null)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
-            
+
             if (duration <= 0)
             {
                 audioSource.volume = targetVolume;
                 yield break;
             }
-            
+
             float deltaTime = 0;
             float startVolume = audioSource.volume;
 

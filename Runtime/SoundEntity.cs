@@ -17,6 +17,7 @@ namespace devolfer.Sound
 
         private Coroutine _playRoutine;
         private Coroutine _fadeRoutine;
+        private Coroutine _stopRoutine;
         private WaitWhile _waitWhilePlayingOrPaused;
         private WaitWhile _waitWhilePaused;
 
@@ -71,7 +72,7 @@ namespace devolfer.Sound
 
                 onPlayEnd?.Invoke();
 
-                _manager.Stop(this);
+                _manager.Stop(this, false);
 
                 _playRoutine = null;
             }
@@ -89,8 +90,13 @@ namespace devolfer.Sound
             _paused = false;
         }
 
-        internal void Stop()
+        internal void Stop(bool fadeOut = true,
+                           float fadeOutDuration = .5f,
+                           Ease fadeOutEase = Ease.Linear,
+                           Action onComplete = null)
         {
+            if (_stopRoutine != null) return;
+
             if (_playRoutine != null)
             {
                 _manager.StopCoroutine(_playRoutine);
@@ -103,20 +109,30 @@ namespace devolfer.Sound
                 _fadeRoutine = null;
             }
 
-            _source.Stop();
-            _paused = false;
-            
-            if (_transform.parent != _manager.transform)
+            if (!fadeOut || Paused)
             {
-                _transform.SetParent(_manager.transform, false);
-                _transform.localPosition = default;
+                _source.Stop();
+                ResetEntity();
+                
+                onComplete?.Invoke();
             }
             else
             {
-                _transform.position = default;
+                _stopRoutine = _manager.StartCoroutine(StopRoutine());
             }
 
-            _properties.ResetOn(ref _source);
+            return;
+
+            IEnumerator StopRoutine()
+            {
+                yield return SoundManager.Fade(_source, fadeOutDuration, 0, fadeOutEase);
+                _source.Stop();
+                ResetEntity();
+                
+                onComplete?.Invoke();
+
+                _stopRoutine = null;
+            }
         }
 
         internal void Fade(float duration, float targetVolume, Ease ease = Ease.Linear)
@@ -135,6 +151,23 @@ namespace devolfer.Sound
 
                 _fadeRoutine = null;
             }
+        }
+
+        private void ResetEntity()
+        {
+            _paused = false;
+
+            if (_transform.parent != _manager.transform)
+            {
+                _transform.SetParent(_manager.transform, false);
+                _transform.localPosition = default;
+            }
+            else
+            {
+                _transform.position = default;
+            }
+
+            _properties.ResetOn(ref _source);
         }
     }
 }
