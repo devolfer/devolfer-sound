@@ -55,6 +55,8 @@ namespace devolfer.Sound
             if (Input.GetKeyDown(KeyCode.Keypad2)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .2f);
             if (Input.GetKeyDown(KeyCode.Keypad5)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .5f);
             if (Input.GetKeyDown(KeyCode.Keypad8)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .8f);
+            if (Input.GetKeyDown(KeyCode.G)) SoundManager.Instance.FadeMixerGroupVolume("VolumeMaster", 2, 1f, Ease.InOutSine);
+            if (Input.GetKeyDown(KeyCode.B)) SoundManager.Instance.CrossFadeMixerGroupVolumes("VolumeSFX", "VolumeMusic", 3);
         }
     }
 }

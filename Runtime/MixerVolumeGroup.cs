@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -70,6 +71,42 @@ namespace devolfer.Sound
             Set(_muted ? 0 : _volumePrevious);
         }
 
+        internal IEnumerator Fade(float duration, float targetVolume, Ease ease)
+        {
+            return Fade(duration, targetVolume, EasingFunctions.GetEasingFunction(ease));
+        }
+        
+        internal IEnumerator Fade(float duration, float targetVolume, Func<float, float> easeFunction)
+        {
+            if (!_audioMixer.HasParameter(_exposedParameter))
+            {
+                Debug.LogError(
+                    $"Exposed Parameter {_exposedParameter} not found in {nameof(AudioMixer)} {_audioMixer}");
+                yield break;
+            }
+            
+            targetVolume = Mathf.Clamp01(targetVolume);
+
+            if (duration <= 0)
+            {
+                Set(targetVolume);
+                yield break;
+            }
+
+            float deltaTime = 0;
+            _audioMixer.TryGetVolume(_exposedParameter, out float startVolume);
+
+            while (deltaTime < duration)
+            {
+                deltaTime += Time.deltaTime;
+                Set(Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration)));
+
+                yield return null;
+            }
+
+            Set(targetVolume);
+        }
+
         internal void Refresh()
         {
             if (_audioMixer.TryGetVolume(_exposedParameter, out _volumeCurrent))
@@ -104,6 +141,11 @@ namespace devolfer.Sound
             value = decibel > -80 ? Mathf.Pow(10, decibel / 20) : 0;
 
             return true;
+        }
+
+        public static bool HasParameter(this AudioMixer mixer, string exposedParameter)
+        {
+            return mixer.GetFloat(exposedParameter, out float _);
         }
     }
 }

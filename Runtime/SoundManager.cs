@@ -16,10 +16,71 @@ namespace devolfer.Sound
         private HashSet<SoundEntity> _entitiesPlaying;
         private HashSet<SoundEntity> _entitiesPaused;
         private HashSet<SoundEntity> _entitiesStopping;
+        
+        private ObjectPool<SoundEntity> _soundEntityPool;
 
         private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
+        private Dictionary<string, Coroutine> _mixerFadeRoutines;
 
-        private ObjectPool<SoundEntity> _pool;
+        protected override void Setup()
+        {
+            base.Setup();
+
+            if (s_instance != this) return;
+
+            SetupSoundEntities();
+            SetupMixers();
+        }
+
+        private void SetupSoundEntities()
+        {
+            _entitiesPlaying = new HashSet<SoundEntity>();
+            _entitiesPaused = new HashSet<SoundEntity>();
+            _entitiesStopping = new HashSet<SoundEntity>();
+
+            _soundEntityPool = new ObjectPool<SoundEntity>(
+                createFunc: () =>
+                {
+                    GameObject obj = new($"SoundEntity-{_soundEntityPool.CountAll}");
+                    obj.transform.SetParent(transform);
+                    SoundEntity entity = obj.AddComponent<SoundEntity>();
+                    entity.Setup(this);
+
+                    obj.SetActive(false);
+
+                    return entity;
+                },
+                actionOnGet: entity => entity.gameObject.SetActive(true),
+                actionOnRelease: entity => entity.gameObject.SetActive(false),
+                actionOnDestroy: entity => Destroy(entity.gameObject),
+                defaultCapacity: _soundEntityPoolCapacityDefault);
+
+            _soundEntityPool.PreAllocate(_soundEntityPoolCapacityDefault);
+        }
+
+        private void SetupMixers()
+        {
+            _mixerVolumeGroups = new Dictionary<string, MixerVolumeGroup>();
+            _mixerFadeRoutines = new Dictionary<string, Coroutine>();
+
+            if (_mixerVolumeGroupsDefault == null || _mixerVolumeGroupsDefault.Length == 0)
+            {
+                AudioMixer audioMixerDefault = Resources.Load<AudioMixer>("AudioMixerDefault");
+
+                _mixerVolumeGroupsDefault = new MixerVolumeGroup[3];
+                _mixerVolumeGroupsDefault[0] = new MixerVolumeGroup(audioMixerDefault, "VolumeMaster", 10);
+                _mixerVolumeGroupsDefault[1] = new MixerVolumeGroup(audioMixerDefault, "VolumeMusic", 10);
+                _mixerVolumeGroupsDefault[2] = new MixerVolumeGroup(audioMixerDefault, "VolumeSFX", 10);
+            }
+
+            foreach (MixerVolumeGroup group in _mixerVolumeGroupsDefault)
+            {
+                RegisterMixerVolumeGroup(group);
+                group.Refresh();
+            }
+        }
+
+        #region Entity
 
         public SoundEntity Play(SoundProperties properties,
                                 Transform parent = null,
@@ -29,7 +90,7 @@ namespace devolfer.Sound
                                 Ease fadeInEase = Ease.Linear,
                                 Action onComplete = null)
         {
-            SoundEntity entity = _pool.Get();
+            SoundEntity entity = _soundEntityPool.Get();
             _entitiesPlaying.Add(entity);
 
             return entity.Play(properties, parent, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
@@ -79,7 +140,7 @@ namespace devolfer.Sound
                 if (pausedEntity) _entitiesPaused.Remove(entity);
                 _entitiesStopping.Remove(entity);
 
-                _pool.Release(entity);
+                _soundEntityPool.Release(entity);
             }
         }
 
@@ -118,7 +179,7 @@ namespace devolfer.Sound
             foreach (SoundEntity entity in _entitiesPaused)
             {
                 entity.Stop(false);
-                _pool.Release(entity);
+                _soundEntityPool.Release(entity);
             }
 
             _entitiesPaused.Clear();
@@ -144,118 +205,11 @@ namespace devolfer.Sound
             return Play(fadeInProperties, fadeInParent, fadeInPosition, true, duration);
         }
 
-        public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
-        {
-            _mixerVolumeGroups.TryAdd(group.ExposedParameter, group);
-        }
-        
-        public void UnRegisterMixerVolumeGroup(MixerVolumeGroup group)
-        {
-            _mixerVolumeGroups.Remove(group.ExposedParameter);
-        }
-
-        public void SetMixerGroupVolume(string exposedParameter, float volume)
-        {
-            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
-            {
-                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
-                return;
-            }
-
-            mixerVolumeGroup.Set(volume);
-        }
-        
-        public void IncreaseMixerGroupVolume(string exposedParameter)
-        {
-            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
-            {
-                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
-                return;
-            }
-
-            mixerVolumeGroup.Increase();
-        }
-        
-        public void DecreaseMixerGroupVolume(string exposedParameter)
-        {
-            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
-            {
-                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
-                return;
-            }
-
-            mixerVolumeGroup.Decrease();
-        }
-
-        public void MuteMixerGroupVolume(string exposedParameter, bool value)
-        {
-            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
-            {
-                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
-                return;
-            }
-
-            mixerVolumeGroup.Mute(value);
-        }
-
-        protected override void Setup()
-        {
-            base.Setup();
-
-            if (s_instance != this) return;
-
-            _entitiesPlaying = new HashSet<SoundEntity>();
-            _entitiesPaused = new HashSet<SoundEntity>();
-            _entitiesStopping = new HashSet<SoundEntity>();
-
-            _mixerVolumeGroups = new Dictionary<string, MixerVolumeGroup>();
-
-            if (_mixerVolumeGroupsDefault == null || _mixerVolumeGroupsDefault.Length == 0)
-            {
-                AudioMixer audioMixerDefault = Resources.Load<AudioMixer>("AudioMixerDefault");
-
-                _mixerVolumeGroupsDefault = new MixerVolumeGroup[3];
-                _mixerVolumeGroupsDefault[0] = new MixerVolumeGroup(audioMixerDefault, "VolumeMaster", 10);
-                _mixerVolumeGroupsDefault[1] = new MixerVolumeGroup(audioMixerDefault, "VolumeMusic", 10);
-                _mixerVolumeGroupsDefault[2] = new MixerVolumeGroup(audioMixerDefault, "VolumeSFX", 10);
-            }
-
-            foreach (MixerVolumeGroup group in _mixerVolumeGroupsDefault)
-            {
-                RegisterMixerVolumeGroup(group);
-                group.Refresh();
-            }
-
-            CreatePool();
-        }
-
-        private void CreatePool()
-        {
-            _pool = new ObjectPool<SoundEntity>(
-                createFunc: () =>
-                {
-                    GameObject obj = new($"SoundEntity-{_pool.CountAll}");
-                    obj.transform.SetParent(transform);
-                    SoundEntity entity = obj.AddComponent<SoundEntity>();
-                    entity.Setup(this);
-
-                    obj.SetActive(false);
-
-                    return entity;
-                },
-                actionOnGet: entity => entity.gameObject.SetActive(true),
-                actionOnRelease: entity => entity.gameObject.SetActive(false),
-                actionOnDestroy: entity => Destroy(entity.gameObject),
-                defaultCapacity: _soundEntityPoolCapacityDefault);
-
-            _pool.PreAllocate(_soundEntityPoolCapacityDefault);
-        }
-
-        public static IEnumerator Fade(AudioSource audioSource,
-                                       float duration,
-                                       float targetVolume,
-                                       Ease ease = Ease.Linear,
-                                       WaitWhile waitWhilePredicate = null)
+        internal static IEnumerator Fade(AudioSource audioSource,
+                                         float duration,
+                                         float targetVolume,
+                                         Ease ease = Ease.Linear,
+                                         WaitWhile waitWhilePredicate = null)
         {
             return Fade(
                 audioSource,
@@ -265,11 +219,11 @@ namespace devolfer.Sound
                 waitWhilePredicate);
         }
 
-        public static IEnumerator Fade(AudioSource audioSource,
-                                       float duration,
-                                       float targetVolume,
-                                       Func<float, float> easeFunction,
-                                       WaitWhile waitWhilePredicate = null)
+        internal static IEnumerator Fade(AudioSource audioSource,
+                                         float duration,
+                                         float targetVolume,
+                                         Func<float, float> easeFunction,
+                                         WaitWhile waitWhilePredicate = null)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
 
@@ -292,6 +246,100 @@ namespace devolfer.Sound
 
             audioSource.volume = targetVolume;
         }
+
+        #endregion
+
+        #region Mixer
+
+        public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
+        {
+            _mixerVolumeGroups.TryAdd(group.ExposedParameter, group);
+        }
+
+        public void UnRegisterMixerVolumeGroup(MixerVolumeGroup group)
+        {
+            _mixerVolumeGroups.Remove(group.ExposedParameter);
+        }
+
+        public void SetMixerGroupVolume(string exposedParameter, float value)
+        {
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            
+            StopMixerFadeRoutine(exposedParameter);
+            
+            mixerVolumeGroup.Set(value);
+        }
+
+        public void IncreaseMixerGroupVolume(string exposedParameter)
+        {
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            
+            StopMixerFadeRoutine(exposedParameter);
+            
+            mixerVolumeGroup.Increase();
+        }
+
+        public void DecreaseMixerGroupVolume(string exposedParameter)
+        {
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            
+            StopMixerFadeRoutine(exposedParameter);
+            
+            mixerVolumeGroup.Decrease();
+        }
+
+        public void MuteMixerGroupVolume(string exposedParameter, bool value)
+        {
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            
+            StopMixerFadeRoutine(exposedParameter);
+            
+            mixerVolumeGroup.Mute(value);
+        }
+
+        public void FadeMixerGroupVolume(string exposedParameter, float duration, float targetVolume, Ease ease)
+        {
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            
+            StopMixerFadeRoutine(exposedParameter);
+            
+            _mixerFadeRoutines.TryAdd(exposedParameter, StartCoroutine(FadeRoutine()));
+            
+            return;
+            
+            IEnumerator FadeRoutine()
+            {
+                yield return mixerVolumeGroup.Fade(duration, targetVolume, ease);
+                
+                _mixerFadeRoutines.Remove(exposedParameter);
+            }
+        }
+
+        public void CrossFadeMixerGroupVolumes(string fadeOutExposedParameter,
+                                               string fadeInExposedParameter,
+                                               float duration)
+        {
+            FadeMixerGroupVolume(fadeOutExposedParameter, duration, 0, Ease.Linear);
+            FadeMixerGroupVolume(fadeInExposedParameter, duration, 1, Ease.Linear);
+        }
+
+        private bool MixerVolumeGroupRegistered(string exposedParameter, out MixerVolumeGroup mixerVolumeGroup)
+        {
+            if (_mixerVolumeGroups.TryGetValue(exposedParameter, out mixerVolumeGroup)) return true;
+
+            Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
+            return false;
+        }
+        
+        private void StopMixerFadeRoutine(string exposedParameter)
+        {
+            if (!_mixerFadeRoutines.TryGetValue(exposedParameter, out Coroutine fadeRoutine)) return;
+            
+            StopCoroutine(fadeRoutine);
+            _mixerFadeRoutines.Remove(exposedParameter);
+        }
+        
+        #endregion
     }
 
     public class Singleton<T> : MonoBehaviour where T : Component
