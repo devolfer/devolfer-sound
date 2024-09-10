@@ -47,6 +47,14 @@ namespace devolfer.Sound
                 _entity = SoundManager.Instance.CrossFade(3, _entity, _sourceCrossfade);
                 (_source, _sourceCrossfade) = (_sourceCrossfade, _source);
             }
+            
+            if (Input.GetKeyDown(KeyCode.M)) SoundManager.Instance.MuteMixerGroupVolume("VolumeMaster", true);
+            if (Input.GetKeyDown(KeyCode.N)) SoundManager.Instance.MuteMixerGroupVolume("VolumeMaster", false);
+            if (Input.GetKeyDown(KeyCode.KeypadPlus)) SoundManager.Instance.IncreaseMixerGroupVolume("VolumeMaster");
+            if (Input.GetKeyDown(KeyCode.KeypadMinus)) SoundManager.Instance.DecreaseMixerGroupVolume("VolumeMaster");
+            if (Input.GetKeyDown(KeyCode.Keypad2)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .2f);
+            if (Input.GetKeyDown(KeyCode.Keypad5)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .5f);
+            if (Input.GetKeyDown(KeyCode.Keypad8)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .8f);
         }
     }
 }

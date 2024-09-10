@@ -2,19 +2,24 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO Audio Mixers handling in general
+    // TODO Audio Mixers fading/cross fading
     public class SoundManager : PersistentSingleton<SoundManager>
     {
-        [SerializeField] private int _poolCapacityDefault = 64;
+        [SerializeField] private int _soundEntityPoolCapacityDefault = 64;
+        [SerializeField] private MixerVolumeGroup[] _mixerVolumeGroupsDefault;
 
-        private ObjectPool<SoundEntity> _pool;
         private HashSet<SoundEntity> _entitiesPlaying;
         private HashSet<SoundEntity> _entitiesPaused;
         private HashSet<SoundEntity> _entitiesStopping;
+
+        private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
+
+        private ObjectPool<SoundEntity> _pool;
 
         public SoundEntity Play(SoundProperties properties,
                                 Transform parent = null,
@@ -135,8 +140,62 @@ namespace devolfer.Sound
                                      Vector3 fadeInPosition = default)
         {
             Stop(fadeOutEntity, fadeOutDuration: duration);
-            
+
             return Play(fadeInProperties, fadeInParent, fadeInPosition, true, duration);
+        }
+
+        public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
+        {
+            _mixerVolumeGroups.TryAdd(group.ExposedParameter, group);
+        }
+        
+        public void UnRegisterMixerVolumeGroup(MixerVolumeGroup group)
+        {
+            _mixerVolumeGroups.Remove(group.ExposedParameter);
+        }
+
+        public void SetMixerGroupVolume(string exposedParameter, float volume)
+        {
+            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
+            {
+                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
+                return;
+            }
+
+            mixerVolumeGroup.Set(volume);
+        }
+        
+        public void IncreaseMixerGroupVolume(string exposedParameter)
+        {
+            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
+            {
+                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
+                return;
+            }
+
+            mixerVolumeGroup.Increase();
+        }
+        
+        public void DecreaseMixerGroupVolume(string exposedParameter)
+        {
+            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
+            {
+                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
+                return;
+            }
+
+            mixerVolumeGroup.Decrease();
+        }
+
+        public void MuteMixerGroupVolume(string exposedParameter, bool value)
+        {
+            if (!_mixerVolumeGroups.TryGetValue(exposedParameter, out MixerVolumeGroup mixerVolumeGroup))
+            {
+                Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
+                return;
+            }
+
+            mixerVolumeGroup.Mute(value);
         }
 
         protected override void Setup()
@@ -148,6 +207,24 @@ namespace devolfer.Sound
             _entitiesPlaying = new HashSet<SoundEntity>();
             _entitiesPaused = new HashSet<SoundEntity>();
             _entitiesStopping = new HashSet<SoundEntity>();
+
+            _mixerVolumeGroups = new Dictionary<string, MixerVolumeGroup>();
+
+            if (_mixerVolumeGroupsDefault == null || _mixerVolumeGroupsDefault.Length == 0)
+            {
+                AudioMixer audioMixerDefault = Resources.Load<AudioMixer>("AudioMixerDefault");
+
+                _mixerVolumeGroupsDefault = new MixerVolumeGroup[3];
+                _mixerVolumeGroupsDefault[0] = new MixerVolumeGroup(audioMixerDefault, "VolumeMaster", 10);
+                _mixerVolumeGroupsDefault[1] = new MixerVolumeGroup(audioMixerDefault, "VolumeMusic", 10);
+                _mixerVolumeGroupsDefault[2] = new MixerVolumeGroup(audioMixerDefault, "VolumeSFX", 10);
+            }
+
+            foreach (MixerVolumeGroup group in _mixerVolumeGroupsDefault)
+            {
+                RegisterMixerVolumeGroup(group);
+                group.Refresh();
+            }
 
             CreatePool();
         }
@@ -169,9 +246,9 @@ namespace devolfer.Sound
                 actionOnGet: entity => entity.gameObject.SetActive(true),
                 actionOnRelease: entity => entity.gameObject.SetActive(false),
                 actionOnDestroy: entity => Destroy(entity.gameObject),
-                defaultCapacity: _poolCapacityDefault);
+                defaultCapacity: _soundEntityPoolCapacityDefault);
 
-            _pool.PreAllocate(_poolCapacityDefault);
+            _pool.PreAllocate(_soundEntityPoolCapacityDefault);
         }
 
         public static IEnumerator Fade(AudioSource audioSource,

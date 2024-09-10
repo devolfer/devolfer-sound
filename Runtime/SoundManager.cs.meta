@@ -1,3 +1,14 @@
 fileFormatVersion: 2
 guid: c9a81e98930f42dfafd1a1a7d1bea57f
-timeCreated: 1725733139
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - _audioMixerGroup: {fileID: 3910149971260875154, guid: 1d0abf53bf73546a0a99d15722370691,
+      type: 2}
+  - _audioMixer: {fileID: 24100000, guid: 1d0abf53bf73546a0a99d15722370691, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
