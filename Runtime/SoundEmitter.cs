@@ -5,8 +5,6 @@ namespace devolfer.Sound
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour
     {
-        [SerializeField] private bool _local;
-
         private AudioSource _source;
         private SoundEntity _entity;
         private Transform _transform;
@@ -30,11 +28,7 @@ namespace devolfer.Sound
                 return;
             }
 
-            _entity = SoundManager.Instance.Play(
-                _source,
-                _local ? _transform : null,
-                _local ? Vector3.zero : _transform.position,
-                onComplete: ClearEntity);
+            _entity = SoundManager.Instance.Play(_source, _transform, onComplete: ClearEntity);
         }
 
         public void Pause()

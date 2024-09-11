@@ -59,16 +59,20 @@ namespace devolfer.Sound
 
         private static float InCirc(float t) => 1 - Mathf.Sqrt(1 - Mathf.Pow(t, 2));
         private static float OutCirc(float t) => Mathf.Sqrt(1 - Mathf.Pow(t - 1, 2));
-        private static float InOutCirc(float t) =>
-            t < .5f ?
+        private static float InOutCirc(float t)
+        {
+            return t < .5f ?
                 (1 - Mathf.Sqrt(1 - Mathf.Pow(2 * t, 2))) * .5f :
                 (Mathf.Sqrt(1 - Mathf.Pow(-2 * t + 2, 2)) + 1) * .5f;
+        }
 
         private static float InExpo(float t) => t == 0 ? 0 : Mathf.Pow(2, 10 * (t - 1));
         private static float OutExpo(float t) => Mathf.Approximately(t, 1) ? 1 : 1 - Mathf.Pow(2, -10 * t);
-        private static float InOutExpo(float t) =>
-            t == 0                    ? 0 :
-            Mathf.Approximately(t, 1) ? 1 :
-            t < .5f                   ? Mathf.Pow(2, 20 * t - 10) * .5f : (2 - Mathf.Pow(2, -20 * t + 10)) * .5f;
+        private static float InOutExpo(float t)
+        {
+            return t == 0                 ? 0 :
+                Mathf.Approximately(t, 1) ? 1 :
+                t < .5f                   ? Mathf.Pow(2, 20 * t - 10) * .5f : (2 - Mathf.Pow(2, -20 * t + 10)) * .5f;
+        }
     }
 }

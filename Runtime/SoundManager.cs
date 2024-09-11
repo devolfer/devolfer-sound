@@ -7,7 +7,6 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
-    // TODO Audio Mixers fading/cross fading
     public class SoundManager : PersistentSingleton<SoundManager>
     {
         [SerializeField] private int _soundEntityPoolCapacityDefault = 64;
