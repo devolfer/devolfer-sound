@@ -2,7 +2,7 @@
   "name": "com.devolfer.sound",
   "version": "1.0.0",
   "displayName": "devolfer Sound",
-  "description": "A lean sound manager that allows simple playback of sounds.",
+  "description": "A lean sound manager that handles sound playback and volume mixing.",
   "unity": "2022.3",
   "author": 
   {
