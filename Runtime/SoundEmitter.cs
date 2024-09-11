@@ -50,6 +50,36 @@ namespace devolfer.Sound
             ClearEntity();
         }
 
+        public void Fade(float targetVolume)
+        {
+            if (Playing) return;
+
+            if (Paused) Resume();
+            
+            SoundManager.Instance.Fade(_entity, 2, targetVolume);
+        }
+
+        public void FadeIn(float duration)
+        {
+            if (Playing || Paused) return;
+
+            _entity = SoundManager.Instance.Play(
+                _source,
+                _transform,
+                fadeIn: true,
+                fadeInDuration: duration,
+                onComplete: ClearEntity);
+        }
+        
+        public void FadeOut(float duration)
+        {
+            if (!Playing && !Paused) return;
+
+            SoundManager.Instance.Stop(_entity, fadeOutDuration: duration);
+
+            ClearEntity();
+        }
+
         private void ClearEntity() => _entity = null;
     }
 }
