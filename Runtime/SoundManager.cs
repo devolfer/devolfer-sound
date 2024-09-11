@@ -9,7 +9,14 @@ namespace devolfer.Sound
 {
     public class SoundManager : PersistentSingleton<SoundManager>
     {
+        [Space]
+        [Tooltip("The number of entities pre-allocated by the sound entity pool." +
+                 "\n\nIdeally set this to the expected number of maximum simultaneously playing sounds.")]
         [SerializeField] private int _soundEntityPoolCapacityDefault = 64;
+        
+        [Space]
+        [Tooltip("Add any Audio Mixer groups you wish here, that the Sound Manager can change the respective volumes of." +
+                 "\n\nIf none are provided, the default Audio Mixer and groups bundled with the package will be used.")]
         [SerializeField] private MixerVolumeGroup[] _mixerVolumeGroupsDefault;
 
         private HashSet<SoundEntity> _entitiesPlaying;
@@ -343,6 +350,8 @@ namespace devolfer.Sound
 
     public class Singleton<T> : MonoBehaviour where T : Component
     {
+        [Tooltip("Optionally override the gameobjects' hide flags, if you want the gameobject e.g. not to be shown in the hierarchy." +
+                 "\n\nBe careful with the not saving options, as you will have to manage deleting manually yourself then!")]
         [SerializeField] protected HideFlags _hideFlags = HideFlags.None;
 
         protected static T s_instance;
@@ -380,11 +389,9 @@ namespace devolfer.Sound
 
     public class PersistentSingleton<T> : Singleton<T> where T : Component
     {
-        [SerializeField] protected bool _autoUnParent = true;
-
         protected override void Setup()
         {
-            if (_autoUnParent) transform.SetParent(null);
+            transform.SetParent(null);
 
             if (s_instance != null)
             {
