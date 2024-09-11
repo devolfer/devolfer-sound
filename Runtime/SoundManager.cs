@@ -7,6 +7,9 @@ using UnityEngine.Pool;
 
 namespace devolfer.Sound
 {
+    /// <summary>
+    /// Handles sound playback and volume mixing.
+    /// </summary>
     public class SoundManager : PersistentSingleton<SoundManager>
     {
         [Space]
@@ -15,7 +18,7 @@ namespace devolfer.Sound
         [SerializeField] private int _soundEntityPoolCapacityDefault = 64;
         
         [Space]
-        [Tooltip("Add any Audio Mixer groups you wish here, that the Sound Manager can change the respective volumes of." +
+        [Tooltip("Add any Audio Mixer Group you wish here, that the Sound Manager can change the respective volume of." +
                  "\n\nIf none are provided, the default Audio Mixer and groups bundled with the package will be used.")]
         [SerializeField] private MixerVolumeGroup[] _mixerVolumeGroupsDefault;
 
@@ -88,6 +91,17 @@ namespace devolfer.Sound
 
         #region Entity
 
+        /// <summary>
+        /// Plays a sound with the specified properties.
+        /// </summary>
+        /// <param name="properties">The properties that define the sound.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looped sounds).</param>
+        /// <returns>The <see cref="SoundEntity"/> used for playback.</returns>
         public SoundEntity Play(SoundProperties properties,
                                 Transform followTarget = null,
                                 Vector3 position = default,
@@ -102,6 +116,38 @@ namespace devolfer.Sound
             return entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
         }
 
+        /// <summary>
+        /// Plays a sound with the properties of an <see cref="AudioSource"/> and automatically disables it.
+        /// </summary>
+        /// <param name="audioSource">The source of which the sound properties will be derived from.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looped sounds).</param>
+        /// <returns>The <see cref="SoundEntity"/> used for playback.</returns>
+        public SoundEntity Play(AudioSource audioSource,
+                                Transform followTarget = null,
+                                Vector3 position = default,
+                                bool fadeIn = false,
+                                float fadeInDuration = .5f,
+                                Ease fadeInEase = Ease.Linear,
+                                Action onComplete = null)
+        {
+            if (audioSource.isPlaying) audioSource.Stop();
+            audioSource.enabled = false;
+            
+            SoundProperties properties = audioSource;
+
+            return Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+        }
+
+        /// <summary>
+        /// Pauses sound playback.
+        /// </summary>
+        /// <param name="entity">The sound entity that is currently playing.</param>
+        /// <remarks>Has no effect if the entity is not playing or currently stopping.</remarks>
         public void Pause(SoundEntity entity)
         {
             if (!_entitiesPlaying.Contains(entity)) return;
@@ -114,6 +160,11 @@ namespace devolfer.Sound
             _entitiesPaused.Add(entity);
         }
 
+        /// <summary>
+        /// Resumes sound playback.
+        /// </summary>
+        /// <param name="entity">The sound entity that is currently paused.</param>
+        /// <remarks>Has no effect if the entity is not paused or currently stopping.</remarks>
         public void Resume(SoundEntity entity)
         {
             if (!_entitiesPaused.Contains(entity)) return;
@@ -126,6 +177,14 @@ namespace devolfer.Sound
             _entitiesPlaying.Add(entity);
         }
 
+        /// <summary>
+        /// Stops sound playback.
+        /// </summary>
+        /// <param name="entity">The sound entity that is either currently playing or paused.</param>
+        /// <param name="fadeOut">True by default. Set this to false, if the volume should not fade out when stopping.</param>
+        /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
+        /// <param name="fadeOutEase">The easing applied when fading out.</param>
+        /// <remarks>Paused entities will be stopped without fade out regardless.</remarks>
         public void Stop(SoundEntity entity,
                          bool fadeOut = true,
                          float fadeOutDuration = .5f,
@@ -150,6 +209,10 @@ namespace devolfer.Sound
             }
         }
 
+        /// <summary>
+        /// Pauses all currently playing sound entities.
+        /// </summary>
+        /// <remarks>Has no effect on entities currently stopping.</remarks>
         public void PauseAll()
         {
             foreach (SoundEntity entity in _entitiesPlaying)
@@ -163,6 +226,9 @@ namespace devolfer.Sound
             _entitiesPlaying.Clear();
         }
 
+        /// <summary>
+        /// Resumes all currently paused sound entities.
+        /// </summary>
         public void ResumeAll()
         {
             foreach (SoundEntity entity in _entitiesPaused)
@@ -176,6 +242,12 @@ namespace devolfer.Sound
             _entitiesPaused.Clear();
         }
 
+        /// <summary>
+        /// Stops all currently playing and paused sound entities.
+        /// </summary>
+        /// <param name="fadeOut">True by default. Set this to false, if the volumes should not fade out when stopping.</param>
+        /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
+        /// <param name="fadeOutEase">The easing applied when fading out.</param>
         public void StopAll(bool fadeOut = true,
                             float fadeOutDuration = 1,
                             Ease fadeOutEase = Ease.Linear)
@@ -191,7 +263,15 @@ namespace devolfer.Sound
             _entitiesPaused.Clear();
         }
 
-        public void Fade(SoundEntity entity, float duration, float targetVolume, Ease ease = Ease.Linear)
+        /// <summary>
+        /// Fades sound volume.
+        /// </summary>
+        /// <param name="entity">The sound entity that is currently playing or paused.</param>
+        /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        /// <param name="ease">The easing applied when fading.</param>
+        /// <remarks>Has no effect on entities currently stopping.</remarks>
+        public void Fade(SoundEntity entity, float targetVolume, float duration, Ease ease = Ease.Linear)
         {
             if (_entitiesStopping.Contains(entity)) return;
 
@@ -200,15 +280,25 @@ namespace devolfer.Sound
             entity.Fade(duration, targetVolume, ease);
         }
 
+        /// <summary>
+        /// Linearly cross-fades a playing sound entity and a new sound. The fading out sound entity will be stopped at the end.
+        /// </summary>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="fadeOutEntity">The sound entity that will fade out and stop.</param>
+        /// <param name="fadeInProperties">The properties that define the newly played sound.</param>
+        /// <param name="followTarget">Optional target the new sound will follow while playing.</param>
+        /// <param name="fadeInPosition">Either the global position or, when following, the position offset at which the new sound is played.</param>
+        /// <returns>The new <see cref="SoundEntity"/> fading in.</returns>
+        /// <remarks>Simultaneously call Stop and Play methods for finer cross-fading control instead.</remarks>
         public SoundEntity CrossFade(float duration,
                                      SoundEntity fadeOutEntity,
                                      SoundProperties fadeInProperties,
-                                     Transform fadeInParent = null,
+                                     Transform followTarget = null,
                                      Vector3 fadeInPosition = default)
         {
             Stop(fadeOutEntity, fadeOutDuration: duration);
 
-            return Play(fadeInProperties, fadeInParent, fadeInPosition, true, duration);
+            return Play(fadeInProperties, followTarget, fadeInPosition, true, duration);
         }
 
         internal static IEnumerator Fade(AudioSource audioSource,
@@ -257,16 +347,31 @@ namespace devolfer.Sound
 
         #region Mixer
 
+        /// <summary>
+        /// Registers a <see cref="MixerVolumeGroup"/> in the internal dictionary.
+        /// </summary>
+        /// <param name="group">The group to be registered.</param>
+        /// <remarks>Once registered, grants access through various methods like <see cref="SetMixerGroupVolume"/> or <see cref="FadeMixerGroupVolume"/>.</remarks>
         public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
         {
             _mixerVolumeGroups.TryAdd(group.ExposedParameter, group);
         }
 
-        public void UnRegisterMixerVolumeGroup(MixerVolumeGroup group)
+        /// <summary>
+        /// Unregisters a <see cref="MixerVolumeGroup"/> from the internal dictionary.
+        /// </summary>
+        /// <param name="group">The group to be unregistered.</param>
+        public void UnregisterMixerVolumeGroup(MixerVolumeGroup group)
         {
             _mixerVolumeGroups.Remove(group.ExposedParameter);
         }
 
+        /// <summary>
+        /// Sets the volume for an Audio Mixer Group.
+        /// </summary>
+        /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <param name="value">The volumes' new value.</param>
+        /// <remarks>Changing a volume stops any ongoing volume fades applied in the mixer.</remarks>
         public void SetMixerGroupVolume(string exposedParameter, float value)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
@@ -276,6 +381,11 @@ namespace devolfer.Sound
             mixerVolumeGroup.Set(value);
         }
 
+        /// <summary>
+        /// Increases the volume of an Audio Mixer Group incrementally.
+        /// </summary>
+        /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <remarks>Has no effect if no Volume Segments are defined in the <see cref="MixerVolumeGroup"/>.</remarks>
         public void IncreaseMixerGroupVolume(string exposedParameter)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
@@ -285,6 +395,11 @@ namespace devolfer.Sound
             mixerVolumeGroup.Increase();
         }
 
+        /// <summary>
+        /// Decreases the volume of an Audio Mixer Group incrementally.
+        /// </summary>
+        /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <remarks>Has no effect if no Volume Segments are defined in the <see cref="MixerVolumeGroup"/>.</remarks>
         public void DecreaseMixerGroupVolume(string exposedParameter)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
@@ -294,6 +409,11 @@ namespace devolfer.Sound
             mixerVolumeGroup.Decrease();
         }
 
+        /// <summary>
+        /// Mutes/Un-mutes the volume of an Audio Mixer Group by setting the volume to 0 or reapplying the previously stored value.
+        /// </summary>
+        /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <param name="value">True = muted, False = unmuted.</param>
         public void MuteMixerGroupVolume(string exposedParameter, bool value)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
@@ -303,7 +423,14 @@ namespace devolfer.Sound
             mixerVolumeGroup.Mute(value);
         }
 
-        public void FadeMixerGroupVolume(string exposedParameter, float duration, float targetVolume, Ease ease)
+        /// <summary>
+        /// Fades the volume of an Audio Mixer Group.
+        /// </summary>
+        /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        /// <param name="ease">The easing applied when fading.</param>
+        public void FadeMixerGroupVolume(string exposedParameter, float targetVolume, float duration, Ease ease)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
             
@@ -321,12 +448,18 @@ namespace devolfer.Sound
             }
         }
 
+        /// <summary>
+        /// Linearly cross-fades the volume of two Audio Mixer Groups.
+        /// </summary>
+        /// <param name="fadeOutExposedParameter">The exposed parameter with which to access the group fading out, e.g. 'VolumeSFX'.</param>
+        /// <param name="fadeInExposedParameter">The exposed parameter with which to access the group fading in, e.g. 'VolumeMusic'.</param>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
         public void CrossFadeMixerGroupVolumes(string fadeOutExposedParameter,
                                                string fadeInExposedParameter,
                                                float duration)
         {
-            FadeMixerGroupVolume(fadeOutExposedParameter, duration, 0, Ease.Linear);
-            FadeMixerGroupVolume(fadeInExposedParameter, duration, 1, Ease.Linear);
+            FadeMixerGroupVolume(fadeOutExposedParameter, 0, duration, Ease.Linear);
+            FadeMixerGroupVolume(fadeInExposedParameter, 1, duration, Ease.Linear);
         }
 
         private bool MixerVolumeGroupRegistered(string exposedParameter, out MixerVolumeGroup mixerVolumeGroup)
@@ -408,11 +541,7 @@ namespace devolfer.Sound
 
     internal static class ObjectPoolExtensions
     {
-        /// <summary>
-        /// Pre-allocates objects from the pool by getting and releasing a desired amount.
-        /// </summary>
-        /// <param name="capacity">The amount of objects to pre-allocate.</param>
-        public static void PreAllocate<T>(this ObjectPool<T> pool, int capacity) where T : class
+        internal static void PreAllocate<T>(this ObjectPool<T> pool, int capacity) where T : class
         {
             T[] preAllocatedT = new T[capacity];
 

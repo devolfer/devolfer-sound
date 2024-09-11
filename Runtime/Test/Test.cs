@@ -30,9 +30,9 @@ namespace devolfer.Sound
 
             if (Input.GetKeyDown(KeyCode.H)) SoundManager.Instance.ResumeAll();
 
-            if (Input.GetKeyDown(KeyCode.F)) SoundManager.Instance.Fade(_entity, 2, 0, Ease.InOutSine);
+            if (Input.GetKeyDown(KeyCode.F)) SoundManager.Instance.Fade(_entity, 0, 2, Ease.InOutSine);
 
-            if (Input.GetKeyDown(KeyCode.D)) SoundManager.Instance.Fade(_entity, 2, 1, Ease.InOutSine);
+            if (Input.GetKeyDown(KeyCode.D)) SoundManager.Instance.Fade(_entity, 1, 2, Ease.InOutSine);
             
             if (Input.GetKeyDown(KeyCode.Z)) _entity = SoundManager.Instance.Play(_source, fadeIn: true, fadeInDuration: 2);
             
@@ -55,7 +55,7 @@ namespace devolfer.Sound
             if (Input.GetKeyDown(KeyCode.Keypad2)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .2f);
             if (Input.GetKeyDown(KeyCode.Keypad5)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .5f);
             if (Input.GetKeyDown(KeyCode.Keypad8)) SoundManager.Instance.SetMixerGroupVolume("VolumeMaster", .8f);
-            if (Input.GetKeyDown(KeyCode.G)) SoundManager.Instance.FadeMixerGroupVolume("VolumeMaster", 2, 1f, Ease.InOutSine);
+            if (Input.GetKeyDown(KeyCode.G)) SoundManager.Instance.FadeMixerGroupVolume("VolumeMaster", 1f, 2, Ease.InOutSine);
             if (Input.GetKeyDown(KeyCode.B)) SoundManager.Instance.CrossFadeMixerGroupVolumes("VolumeSFX", "VolumeMusic", 3);
         }
     }
