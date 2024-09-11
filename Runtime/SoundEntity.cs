@@ -15,6 +15,10 @@ namespace devolfer.Sound
         private Transform _transform;
         private AudioSource _source;
 
+        private bool _hasFollowTarget;
+        private Transform _followTarget;
+        private Vector3 _followTargetOffset;
+
         private Coroutine _playRoutine;
         private Coroutine _fadeRoutine;
         private Coroutine _stopRoutine;
@@ -31,16 +35,22 @@ namespace devolfer.Sound
             _transform = transform;
             if (!TryGetComponent(out _source)) _source = gameObject.AddComponent<AudioSource>();
 
-            _playRoutine = null;
-            _fadeRoutine = null;
             _waitWhilePlayingOrPaused = new WaitWhile(() => Playing || Paused);
             _waitWhilePaused = new WaitWhile(() => Paused);
 
             _setup = true;
         }
 
+        private void LateUpdate()
+        {
+            if (_hasFollowTarget && Playing && !_paused)
+            {
+                _transform.position = _followTarget.position + _followTargetOffset;
+            }
+        }
+
         internal SoundEntity Play(SoundProperties properties,
-                                  Transform parent = null,
+                                  Transform followTarget = null,
                                   Vector3 position = default,
                                   bool fadeIn = false,
                                   float fadeInDuration = .5f,
@@ -50,10 +60,11 @@ namespace devolfer.Sound
             _properties = properties;
             _properties.ApplyOn(ref _source);
 
-            if (parent != null)
+            if (followTarget != null)
             {
-                _transform.SetParent(parent, false);
-                _transform.localPosition = position;
+                _hasFollowTarget = true;
+                _followTarget = followTarget;
+                _followTargetOffset = position;
             }
             else
             {
@@ -163,15 +174,14 @@ namespace devolfer.Sound
         {
             _paused = false;
 
-            if (_transform.parent != _manager.transform)
+            if (_hasFollowTarget)
             {
-                _transform.SetParent(_manager.transform, false);
-                _transform.localPosition = default;
+                _hasFollowTarget = false;
+                _followTarget = null;
+                _followTargetOffset = default;
             }
-            else
-            {
-                _transform.position = default;
-            }
+            
+            _transform.position = default;
 
             _properties.ResetOn(ref _source);
         }

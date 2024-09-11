@@ -89,7 +89,7 @@ namespace devolfer.Sound
         #region Entity
 
         public SoundEntity Play(SoundProperties properties,
-                                Transform parent = null,
+                                Transform followTarget = null,
                                 Vector3 position = default,
                                 bool fadeIn = false,
                                 float fadeInDuration = .5f,
@@ -99,7 +99,7 @@ namespace devolfer.Sound
             SoundEntity entity = _soundEntityPool.Get();
             _entitiesPlaying.Add(entity);
 
-            return entity.Play(properties, parent, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            return entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
         }
 
         public void Pause(SoundEntity entity)
