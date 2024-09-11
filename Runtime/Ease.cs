@@ -1,5 +1,8 @@
 namespace devolfer.Sound
 {
+    /// <summary>
+    /// Various functions for easing a volume fade.
+    /// </summary>
     public enum Ease
     {
         Linear,
