@@ -4,10 +4,20 @@ using UnityEngine;
 
 namespace devolfer.Sound
 {
+    /// <summary>
+    /// An extended wrapper of an <see cref="AudioSource"/> that works together with the <see cref="SoundManager"/>. 
+    /// </summary>
     [AddComponentMenu("")]
     public class SoundEntity : MonoBehaviour
     {
+        /// <summary>
+        /// Is the SoundEntity playing?
+        /// </summary>
         public bool Playing => _setup && _source.isPlaying;
+        
+        /// <summary>
+        /// Is the SoundEntity paused?
+        /// </summary>
         public bool Paused => _setup && _paused;
 
         private SoundManager _manager;
@@ -31,7 +41,7 @@ namespace devolfer.Sound
         internal void Setup(SoundManager manager)
         {
             _manager = manager;
-            _properties = new SoundProperties();
+            _properties = new SoundProperties(default(AudioClip));
             _transform = transform;
             if (!TryGetComponent(out _source)) _source = gameObject.AddComponent<AudioSource>();
 
@@ -97,12 +107,16 @@ namespace devolfer.Sound
 
         internal void Pause()
         {
+            if (Paused) return;
+            
             _paused = true;
             _source.Pause();
         }
 
         internal void Resume()
         {
+            if (!Paused) return;
+            
             _source.UnPause();
             _paused = false;
         }
@@ -183,7 +197,7 @@ namespace devolfer.Sound
             
             _transform.position = default;
 
-            _properties.ResetOn(ref _source);
+            SoundProperties.ResetOn(ref _source);
         }
     }
 }
