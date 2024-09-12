@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Pool;
+#if UNITASK_INCLUDED
+using System.Threading;
+using Cysharp.Threading.Tasks;
+#endif
 
 namespace devolfer.Sound
 {
@@ -13,19 +17,21 @@ namespace devolfer.Sound
     public class SoundManager : PersistentSingleton<SoundManager>
     {
         [Space]
-        [Tooltip("The number of entities pre-allocated by the sound entity pool." +
-                 "\n\nIdeally set this to the expected number of maximum simultaneously playing sounds.")]
+        [Tooltip(
+            "The number of entities pre-allocated by the sound entity pool." +
+            "\n\nIdeally set this to the expected number of maximum simultaneously playing sounds.")]
         [SerializeField] private int _soundEntityPoolCapacityDefault = 64;
-        
+
         [Space]
-        [Tooltip("Add any Audio Mixer Group you wish here, that the Sound Manager can change the respective volume of." +
-                 "\n\nIf none are provided, the default Audio Mixer and groups bundled with the package will be used.")]
+        [Tooltip(
+            "Add any Audio Mixer Group you wish here, that the Sound Manager can change the respective volume of." +
+            "\n\nIf none are provided, the default Audio Mixer and groups bundled with the package will be used.")]
         [SerializeField] private MixerVolumeGroup[] _mixerVolumeGroupsDefault;
 
         private HashSet<SoundEntity> _entitiesPlaying;
         private HashSet<SoundEntity> _entitiesPaused;
         private HashSet<SoundEntity> _entitiesStopping;
-        
+
         private ObjectPool<SoundEntity> _soundEntityPool;
 
         private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
@@ -137,7 +143,7 @@ namespace devolfer.Sound
         {
             if (audioSource.isPlaying) audioSource.Stop();
             audioSource.enabled = false;
-            
+
             SoundProperties properties = audioSource;
 
             return Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
@@ -301,6 +307,60 @@ namespace devolfer.Sound
             return Play(fadeInProperties, followTarget, fadeInPosition, true, duration);
         }
 
+#if UNITASK_INCLUDED
+        internal static async UniTask Fade(AudioSource audioSource,
+                                           float duration,
+                                           float targetVolume,
+                                           Ease ease = Ease.Linear,
+                                           Func<bool> waitWhilePredicate = default,
+                                           CancellationToken cancellationToken = default)
+        {
+            await Fade(
+                audioSource,
+                duration,
+                targetVolume,
+                EasingFunctions.GetEasingFunction(ease),
+                waitWhilePredicate,
+                cancellationToken);
+        }
+
+        internal static async UniTask Fade(AudioSource audioSource,
+                                           float duration,
+                                           float targetVolume,
+                                           Func<float, float> easeFunction,
+                                           Func<bool> waitWhilePredicate = default,
+                                           CancellationToken cancellationToken = default)
+        {
+            targetVolume = Mathf.Clamp01(targetVolume);
+
+            if (duration <= 0)
+            {
+                audioSource.volume = targetVolume;
+                return;
+            }
+
+            float deltaTime = 0;
+            float startVolume = audioSource.volume;
+
+            while (deltaTime < duration)
+            {
+                deltaTime += Time.deltaTime;
+                audioSource.volume = Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration));
+
+                if (waitWhilePredicate != default)
+                {
+                    await UniTask.WaitWhile(waitWhilePredicate, cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken: cancellationToken);
+                }
+            }
+
+            audioSource.volume = targetVolume;
+        }
+
+#else
         internal static IEnumerator Fade(AudioSource audioSource,
                                          float duration,
                                          float targetVolume,
@@ -342,6 +402,7 @@ namespace devolfer.Sound
 
             audioSource.volume = targetVolume;
         }
+#endif
 
         #endregion
 
@@ -375,9 +436,9 @@ namespace devolfer.Sound
         public void SetMixerGroupVolume(string exposedParameter, float value)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
-            
+
             StopMixerFadeRoutine(exposedParameter);
-            
+
             mixerVolumeGroup.Set(value);
         }
 
@@ -389,9 +450,9 @@ namespace devolfer.Sound
         public void IncreaseMixerGroupVolume(string exposedParameter)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
-            
+
             StopMixerFadeRoutine(exposedParameter);
-            
+
             mixerVolumeGroup.Increase();
         }
 
@@ -403,9 +464,9 @@ namespace devolfer.Sound
         public void DecreaseMixerGroupVolume(string exposedParameter)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
-            
+
             StopMixerFadeRoutine(exposedParameter);
-            
+
             mixerVolumeGroup.Decrease();
         }
 
@@ -417,9 +478,9 @@ namespace devolfer.Sound
         public void MuteMixerGroupVolume(string exposedParameter, bool value)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
-            
+
             StopMixerFadeRoutine(exposedParameter);
-            
+
             mixerVolumeGroup.Mute(value);
         }
 
@@ -433,17 +494,17 @@ namespace devolfer.Sound
         public void FadeMixerGroupVolume(string exposedParameter, float targetVolume, float duration, Ease ease)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
-            
+
             StopMixerFadeRoutine(exposedParameter);
-            
+
             _mixerFadeRoutines.TryAdd(exposedParameter, StartCoroutine(FadeRoutine()));
-            
+
             return;
-            
+
             IEnumerator FadeRoutine()
             {
                 yield return mixerVolumeGroup.Fade(duration, targetVolume, ease);
-                
+
                 _mixerFadeRoutines.Remove(exposedParameter);
             }
         }
@@ -469,22 +530,23 @@ namespace devolfer.Sound
             Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
             return false;
         }
-        
+
         private void StopMixerFadeRoutine(string exposedParameter)
         {
             if (!_mixerFadeRoutines.TryGetValue(exposedParameter, out Coroutine fadeRoutine)) return;
-            
+
             StopCoroutine(fadeRoutine);
             _mixerFadeRoutines.Remove(exposedParameter);
         }
-        
+
         #endregion
     }
 
     public class Singleton<T> : MonoBehaviour where T : Component
     {
-        [Tooltip("Optionally override the gameobjects' hide flags, if you want the gameobject e.g. not to be shown in the hierarchy." +
-                 "\n\nBe careful with the not saving options, as you will have to manage deleting manually yourself then!")]
+        [Tooltip(
+            "Optionally override the gameobjects' hide flags, if you want the gameobject e.g. not to be shown in the hierarchy." +
+            "\n\nBe careful with the not saving options, as you will have to manage deleting manually yourself then!")]
         [SerializeField] protected HideFlags _hideFlags = HideFlags.None;
 
         protected static T s_instance;
@@ -549,4 +611,26 @@ namespace devolfer.Sound
             for (int i = preAllocatedT.Length - 1; i >= 0; i--) pool.Release(preAllocatedT[i]);
         }
     }
+
+#if UNITASK_INCLUDED
+    internal static class TaskHelper
+    {
+        internal static CancellationToken Refresh(ref CancellationTokenSource cancellationTokenSource)
+        {
+            Kill(ref cancellationTokenSource);
+
+            cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            return cancellationTokenSource.Token;
+        }
+        
+        internal static void Kill(ref CancellationTokenSource cancellationTokenSource)
+        {
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = null;
+        }
+    }
+#endif
 }
