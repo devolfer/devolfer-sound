@@ -654,6 +654,53 @@ namespace devolfer.Sound
         }
 
         /// <summary>
+        /// Sets the properties of a playing or paused sound.
+        /// </summary>
+        /// <param name="entity">The entity whose properties will be changed.</param>
+        /// <param name="properties">The new properties.</param>
+        /// <param name="followTarget">The target the sound will follow while playing (none if null).</param>
+        /// <param name="position">Either the global position or, when following, the position offset of the sound.</param>
+        /// <remarks>Will change ALL properties, the followTarget and the position.
+        /// Be sure to retrieve the original properties (e.g. via copy constructor), if you only want to change certain properties.</remarks>
+        public void Set(SoundEntity entity,
+                        SoundProperties properties,
+                        Transform followTarget,
+                        Vector3 position)
+        {
+            if (properties == null) return;
+
+            entity.SetProperties(properties, followTarget, position);
+        }
+
+        /// <summary>
+        /// Sets the properties of a playing or paused AudioSource that is handled by this SoundManager.
+        /// </summary>
+        /// <param name="audioSource">The source used to initiate playback via the manager.</param>
+        /// <param name="properties">The new properties.</param>
+        /// <param name="followTarget">The target the sound will follow while playing (none if null).</param>
+        /// <param name="position">Either the global position or, when following, the position offset of the sound.</param>
+        /// <remarks>Will change ALL properties, the followTarget and the position.
+        /// Be sure to retrieve the original properties (e.g. via copy constructor), if you only want to change certain properties.</remarks>
+        public void Set(AudioSource audioSource,
+                        SoundProperties properties,
+                        Transform followTarget,
+                        Vector3 position)
+        {
+            if (properties == null) return;
+
+            if (_audioSourcesPaused.TryGetValue(audioSource, out SoundEntity entityPaused))
+            {
+                entityPaused.SetProperties(properties, followTarget, position);
+                return;
+            }
+
+            if (_audioSourcesPlaying.TryGetValue(audioSource, out SoundEntity entityPlaying))
+            {
+                entityPlaying.SetProperties(properties, followTarget, position);
+            }
+        }
+
+        /// <summary>
         /// Fades the volume of a playing sound.
         /// </summary>
         /// <param name="entity">The sound entity that is currently playing or paused.</param>
@@ -994,8 +1041,9 @@ namespace devolfer.Sound
             if (!group.AudioMixer.HasParameter(group.ExposedParameter))
             {
                 Debug.LogError(
-                    $"You are trying to register a group with a non-existing exposed parameter {group.ExposedParameter} " +
-                    $"for the Audio Mixer {group.AudioMixer}. Please add the desired parameter in the Editor.");
+                    $"You are trying to register a {nameof(MixerVolumeGroup)} with the non-existing exposed parameter " +
+                    $"{group.ExposedParameter} for the Audio Mixer {group.AudioMixer}. " +
+                    "Please add the necessary exposed parameter in the Audio Mixer in the Editor.");
                 return;
             }
 

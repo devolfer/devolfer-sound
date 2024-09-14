@@ -36,18 +36,45 @@ namespace devolfer.Sound
         public bool Stopping { get; private set; }
 
         /// <summary>
-        /// Is the SoundEntity playing from an external AudioSource?
+        /// Did the SoundEntity originate from an external AudioSource?
         /// </summary>
         /// <remarks>This means that the Play method of this entity was initiated via an AudioSource rather than from SoundProperties.</remarks>
         public bool FromExternalAudioSource { get; private set; }
 
+        /// <summary>
+        /// The external AudioSource this SoundEntity originated from.
+        /// </summary>
+        /// <remarks>Check <see cref="FromExternalAudioSource"/> to foresee a null reference.</remarks>
+        public AudioSource ExternalAudioSource => _externalAudioSource;
+
+        /// <summary>
+        /// The global position of the entity.
+        /// </summary>
+        /// <remarks>Will be cheaper than calling 'this.transform.position'.</remarks>
+        public Vector3 Position => _transform.position;
+
+        /// <summary>
+        /// Whether this entity is following the position of another Transform.
+        /// </summary>
+        public bool HasFollowTarget => _hasFollowTarget;
+
+        /// <summary>
+        /// The Transform this entity is following while playing.
+        /// </summary>
+        /// <remarks>Check <see cref="HasFollowTarget"/> to foresee a null reference.</remarks>
+        public Transform FollowTarget => _followTarget;
+        
+        /// <summary>
+        /// The position offset relative to the <see cref="FollowTarget"/>.
+        /// </summary>
+        public Vector3 FollowTargetOffset => _followTargetOffset;
+
         private SoundManager _manager;
         private SoundProperties _properties;
         private Transform _transform;
-        private AudioSource _entitySource;
-
-        private AudioSource _externalSource;
-
+        private AudioSource _audioSource;
+        private AudioSource _externalAudioSource;
+        
         private bool _hasFollowTarget;
         private Transform _followTarget;
         private Vector3 _followTargetOffset;
@@ -57,7 +84,7 @@ namespace devolfer.Sound
         private CancellationTokenSource _playCts;
         private CancellationTokenSource _fadeCts;
         private CancellationTokenSource _stopCts;
-        private Func<bool> SourceIsPlayingOrPausedPredicate => () => (_setup && _entitySource.isPlaying) || Paused;
+        private Func<bool> SourceIsPlayingOrPausedPredicate => () => (_setup && _audioSource.isPlaying) || Paused;
         private Func<bool> PausedPredicate => () => Paused;
 
         private Coroutine _playRoutine;
@@ -71,7 +98,7 @@ namespace devolfer.Sound
             _manager = manager;
             _properties = new SoundProperties(default(AudioClip));
             _transform = transform;
-            if (!TryGetComponent(out _entitySource)) _entitySource = gameObject.AddComponent<AudioSource>();
+            if (!TryGetComponent(out _audioSource)) _audioSource = gameObject.AddComponent<AudioSource>();
 
             _waitWhileSourceIsPlayingOrPaused = new WaitWhile(SourceIsPlayingOrPausedPredicate);
             _waitWhilePaused = new WaitWhile(PausedPredicate);
@@ -106,7 +133,7 @@ namespace devolfer.Sound
                                   Ease fadeInEase = Ease.Linear,
                                   Action onComplete = null)
         {
-            ApplyEntityProperties(properties, followTarget, position);
+            SetProperties(properties, followTarget, position);
 
             _playRoutine = _manager.StartCoroutine(PlayRoutine());
 
@@ -115,13 +142,13 @@ namespace devolfer.Sound
             IEnumerator PlayRoutine()
             {
                 Playing = true;
-                _entitySource.Play();
+                _audioSource.Play();
 
                 if (fadeIn)
                 {
-                    _entitySource.volume = 0;
+                    _audioSource.volume = 0;
                     yield return SoundManager.FadeRoutine(
-                        _entitySource,
+                        _audioSource,
                         fadeInDuration,
                         properties.Volume,
                         fadeInEase,
@@ -146,7 +173,7 @@ namespace devolfer.Sound
                                   Ease fadeInEase = Ease.Linear,
                                   Action onComplete = null)
         {
-            _externalSource = audioSource;
+            _externalAudioSource = audioSource;
             FromExternalAudioSource = true;
             
             if (audioSource.isPlaying) audioSource.Stop();
@@ -181,17 +208,17 @@ namespace devolfer.Sound
                 TaskHelper.Link(ref cancellationToken, ref _playCts);
             }
 
-            ApplyEntityProperties(properties, followTarget, position);
+            SetProperties(properties, followTarget, position);
 
             Playing = true;
-            _entitySource.Play();
+            _audioSource.Play();
 
             if (fadeIn)
             {
-                _entitySource.volume = 0;
+                _audioSource.volume = 0;
 
                 await SoundManager.FadeTask(
-                    _entitySource,
+                    _audioSource,
                     fadeInDuration,
                     properties.Volume,
                     fadeInEase,
@@ -224,7 +251,7 @@ namespace devolfer.Sound
                       Ease fadeInEase = Ease.Linear,
                       CancellationToken cancellationToken = default)
         {
-            _externalSource = audioSource;
+            _externalAudioSource = audioSource;
             FromExternalAudioSource = true;
             
             if (audioSource.isPlaying) audioSource.Stop();
@@ -240,14 +267,14 @@ namespace devolfer.Sound
             if (Paused) return;
 
             Paused = true;
-            _entitySource.Pause();
+            _audioSource.Pause();
         }
 
         internal void Resume()
         {
             if (!Paused) return;
 
-            _entitySource.UnPause();
+            _audioSource.UnPause();
             Paused = false;
         }
 
@@ -281,8 +308,8 @@ namespace devolfer.Sound
 
             if (!fadeOut || Paused)
             {
-                _entitySource.Stop();
-                ResetEntityProperties();
+                _audioSource.Stop();
+                ResetProperties();
 
                 onComplete?.Invoke();
             }
@@ -297,10 +324,10 @@ namespace devolfer.Sound
             {
                 Stopping = true;
                 
-                yield return SoundManager.FadeRoutine(_entitySource, fadeOutDuration, 0, fadeOutEase);
+                yield return SoundManager.FadeRoutine(_audioSource, fadeOutDuration, 0, fadeOutEase);
 
-                _entitySource.Stop();
-                ResetEntityProperties();
+                _audioSource.Stop();
+                ResetProperties();
 
                 onComplete?.Invoke();
 
@@ -345,8 +372,8 @@ namespace devolfer.Sound
 
             if (!fadeOut || Paused)
             {
-                _entitySource.Stop();
-                ResetEntityProperties();
+                _audioSource.Stop();
+                ResetProperties();
             }
             else
             {
@@ -363,14 +390,14 @@ namespace devolfer.Sound
                 Stopping = true;
 
                 await SoundManager.FadeTask(
-                    _entitySource,
+                    _audioSource,
                     fadeOutDuration,
                     0,
                     fadeOutEase,
                     cancellationToken: cancellationToken);
 
-                _entitySource.Stop();
-                ResetEntityProperties();
+                _audioSource.Stop();
+                ResetProperties();
 
                 Stopping = false;
             }
@@ -394,7 +421,7 @@ namespace devolfer.Sound
             {
                 Fading = true;
                 
-                yield return SoundManager.FadeRoutine(_entitySource, duration, targetVolume, ease, _waitWhilePaused);
+                yield return SoundManager.FadeRoutine(_audioSource, duration, targetVolume, ease, _waitWhilePaused);
 
                 onComplete?.Invoke();
                 
@@ -427,7 +454,7 @@ namespace devolfer.Sound
             Fading = true;
 
             await SoundManager.FadeTask(
-                _entitySource,
+                _audioSource,
                 duration,
                 targetVolume,
                 ease,
@@ -437,15 +464,16 @@ namespace devolfer.Sound
             Fading = false;
         }
 
-        private void ApplyEntityProperties(SoundProperties properties, Transform followTarget, Vector3 position)
+        internal void SetProperties(SoundProperties properties, Transform followTarget, Vector3 position)
         {
             _properties = properties;
-            _properties.ApplyOn(ref _entitySource);
+            _properties.ApplyOn(ref _audioSource);
+            
+            _followTarget = followTarget;
+            _hasFollowTarget = _followTarget != null;
 
-            if (followTarget != null)
+            if (_hasFollowTarget)
             {
-                _hasFollowTarget = true;
-                _followTarget = followTarget;
                 _followTargetOffset = position;
             }
             else
@@ -454,7 +482,7 @@ namespace devolfer.Sound
             }
         }
 
-        private void ResetEntityProperties()
+        private void ResetProperties()
         {
             Paused = false;
 
@@ -467,9 +495,9 @@ namespace devolfer.Sound
 
             _transform.position = default;
 
-            SoundProperties.ResetOn(ref _entitySource);
+            SoundProperties.ResetOn(ref _audioSource);
 
-            _externalSource = null;
+            _externalAudioSource = null;
             FromExternalAudioSource = false;
         }
     }
