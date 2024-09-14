@@ -324,7 +324,7 @@ namespace devolfer.Sound
             }
         }
 
-        internal void Fade(float duration, float targetVolume, Ease ease = Ease.Linear)
+        internal void Fade(float targetVolume, float duration, Ease ease = Ease.Linear)
         {
             if (Fading)
             {
@@ -355,8 +355,8 @@ namespace devolfer.Sound
 #else
             Task
 #endif
-            FadeAsync(float duration,
-                      float targetVolume,
+            FadeAsync(float targetVolume,
+                      float duration,
                       Ease ease = Ease.Linear,
                       CancellationToken cancellationToken = default)
         {

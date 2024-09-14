@@ -38,6 +38,8 @@ namespace devolfer.Sound
         private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
         private Dictionary<string, Coroutine> _mixerFadeRoutines;
 
+        #region Setup
+
         protected override void Setup()
         {
             base.Setup();
@@ -95,6 +97,8 @@ namespace devolfer.Sound
                 group.Refresh();
             }
         }
+
+        #endregion
 
         #region Entity
 
@@ -464,7 +468,22 @@ namespace devolfer.Sound
 
             if (_entitiesPaused.Contains(entity)) Resume(entity);
 
-            entity.Fade(duration, targetVolume, ease);
+            entity.Fade(targetVolume, duration, ease);
+        }
+
+        public void Fade(AudioSource audioSource, float targetVolume, float duration, Ease ease = Ease.Linear)
+        {
+            if (!audioSource.isPlaying) return;
+            
+            Transform audioSourceParent = audioSource.transform.parent;
+            bool audioSourceHasParent = audioSourceParent != null;
+
+            SoundEntity entity = Play(
+                audioSource,
+                audioSourceHasParent ? audioSourceParent : null,
+                audioSourceHasParent ? audioSource.transform.localPosition : default);
+
+            Fade(entity, targetVolume, duration, ease);
         }
 
         public
@@ -483,7 +502,34 @@ namespace devolfer.Sound
 
             if (_entitiesPaused.Contains(entity)) Resume(entity);
 
-            return entity.FadeAsync(duration, targetVolume, ease, cancellationToken);
+            return entity.FadeAsync(targetVolume, duration, ease, cancellationToken);
+        }
+        
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeAsync(AudioSource audioSource,
+                      float targetVolume,
+                      float duration,
+                      Ease ease = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            if (!audioSource.isPlaying) return default;
+            
+            Transform audioSourceParent = audioSource.transform.parent;
+            bool audioSourceHasParent = audioSourceParent != null;
+
+            PlayAsync(
+                out SoundEntity entity, 
+                audioSource,
+                audioSourceHasParent ? audioSourceParent : null,
+                audioSourceHasParent ? audioSource.transform.localPosition : default,
+                cancellationToken: cancellationToken);
+
+            return FadeAsync(entity, targetVolume, duration, ease, cancellationToken);
         }
 
         /// <summary>
