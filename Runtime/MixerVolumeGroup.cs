@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -25,7 +24,7 @@ namespace devolfer.Sound
             "This will allow increasing/decreasing the volume in steps (e.g. 10 segments = 0.1 steps)." +
             "\n\nSetting the volume to a specific value is of course still possible.")]
         [SerializeField, Min(1)] private int _volumeSegments;
-        
+
         /// <summary>
         /// The Audio Mixer the group is a part of.
         /// </summary>
@@ -40,17 +39,17 @@ namespace devolfer.Sound
         /// The amount of volume segments the range 0.0 to 1.0 is split into.
         /// </summary>
         public int VolumeSegments => _volumeSegments;
-        
+
         /// <summary>
         /// The current volume from 0.0 to 1.0.
         /// </summary>
         public float VolumeCurrent => _volumeCurrent;
-        
+
         /// <summary>
         /// The current dB from -80 to 0.
         /// </summary>
         public float DecibelCurrent => _volumeCurrent != 0 ? Mathf.Log10(_volumeCurrent) * 20 : -80;
-        
+
         /// <summary>
         /// Is the group muted?
         /// </summary>

@@ -50,7 +50,7 @@ namespace devolfer.Sound
         /// </summary>
         public void Pause()
         {
-            if (Playing) SoundManager.Instance.Pause(_entity);
+            if (Playing) SoundManager.Instance.Pause(_source);
         }
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace devolfer.Sound
         /// </summary>
         public void Resume()
         {
-            if (Paused) SoundManager.Instance.Resume(_entity);
+            if (Paused) SoundManager.Instance.Resume(_source);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace devolfer.Sound
         {
             if (!Playing && !Paused) return;
 
-            SoundManager.Instance.Stop(_entity);
+            SoundManager.Instance.Stop(_source);
 
             ClearEntity();
         }
@@ -83,7 +83,7 @@ namespace devolfer.Sound
 
             if (Paused) Resume();
 
-            SoundManager.Instance.Fade(_entity, targetVolume, 2);
+            SoundManager.Instance.Fade(_source, targetVolume, 2);
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace devolfer.Sound
         {
             if (!Playing && !Paused) return;
 
-            SoundManager.Instance.Stop(_entity, fadeOutDuration: duration);
+            SoundManager.Instance.Stop(_source, fadeOutDuration: duration);
 
             ClearEntity();
         }
