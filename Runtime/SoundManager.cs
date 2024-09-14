@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +7,9 @@ using UnityEngine.Audio;
 using UnityEngine.Pool;
 #if UNITASK_INCLUDED
 using Cysharp.Threading.Tasks;
+#endif
+#if !UNITASK_INCLUDED
+using System.Collections;
 #endif
 
 namespace devolfer.Sound
@@ -40,8 +42,10 @@ namespace devolfer.Sound
         private Dictionary<AudioSource, SoundEntity> _audioSourcesStopping;
 
         private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
-        private Dictionary<string, Coroutine> _mixerFadeRoutines;
         private Dictionary<string, CancellationTokenSource> _mixerFadeCancellationTokenSources;
+#if !UNITASK_INCLUDED
+        private Dictionary<string, Coroutine> _mixerFadeRoutines;
+#endif
 
         #region Setup
 
@@ -87,8 +91,10 @@ namespace devolfer.Sound
         private void SetupMixers()
         {
             _mixerVolumeGroups = new Dictionary<string, MixerVolumeGroup>();
-            _mixerFadeRoutines = new Dictionary<string, Coroutine>();
             _mixerFadeCancellationTokenSources = new Dictionary<string, CancellationTokenSource>();
+#if !UNITASK_INCLUDED
+            _mixerFadeRoutines = new Dictionary<string, Coroutine>();
+#endif
 
             if (_mixerVolumeGroupsDefault == null || _mixerVolumeGroupsDefault.Length == 0)
             {
@@ -916,6 +922,7 @@ namespace devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
+#if !UNITASK_INCLUDED
         internal static IEnumerator FadeRoutine(AudioSource audioSource,
                                                 float duration,
                                                 float targetVolume,
@@ -957,6 +964,7 @@ namespace devolfer.Sound
 
             audioSource.volume = targetVolume;
         }
+#endif
 
         internal static
 #if UNITASK_INCLUDED
@@ -1137,6 +1145,23 @@ namespace devolfer.Sound
 
             StopMixerFading(exposedParameter);
 
+#if UNITASK_INCLUDED
+            CancellationTokenSource cts = new();
+            _mixerFadeCancellationTokenSources.TryAdd(exposedParameter, cts);
+
+            DoFadeTask(cts.Token).Forget();
+
+            return;
+
+            async UniTaskVoid DoFadeTask(CancellationToken cancellationToken)
+            {
+                await FadeMixerTask(mixerVolumeGroup, duration, targetVolume, ease, cancellationToken);
+
+                onComplete?.Invoke();
+
+                _mixerFadeCancellationTokenSources.Remove(exposedParameter);
+            }
+#else
             _mixerFadeRoutines.TryAdd(exposedParameter, StartCoroutine(DoFadeRoutine()));
 
             return;
@@ -1149,6 +1174,7 @@ namespace devolfer.Sound
 
                 _mixerFadeRoutines.Remove(exposedParameter);
             }
+#endif
         }
 
         public async
@@ -1209,6 +1235,7 @@ namespace devolfer.Sound
             return FadeMixerGroupVolumeAsync(fadeInExposedParameter, 1, duration, cancellationToken: cancellationToken);
         }
 
+#if !UNITASK_INCLUDED
         private static IEnumerator FadeMixerRoutine(MixerVolumeGroup mixerVolumeGroup,
                                                     float duration,
                                                     float targetVolume,
@@ -1243,6 +1270,7 @@ namespace devolfer.Sound
 
             mixerVolumeGroup.Set(targetVolume);
         }
+#endif
 
         private static
 #if UNITASK_INCLUDED
@@ -1312,10 +1340,12 @@ namespace devolfer.Sound
 
         private void StopMixerFading(string exposedParameter)
         {
+#if !UNITASK_INCLUDED
             if (_mixerFadeRoutines.Remove(exposedParameter, out Coroutine fadeRoutine))
             {
                 StopCoroutine(fadeRoutine);
             }
+#endif
 
             if (_mixerFadeCancellationTokenSources.Remove(exposedParameter, out CancellationTokenSource cts))
             {

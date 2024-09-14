@@ -73,12 +73,7 @@ namespace devolfer.Sound
 
         internal void Set(float volume)
         {
-            if (!_audioMixer.TrySetVolume(_exposedParameter, ref volume))
-            {
-                Debug.LogError(
-                    $"Exposed Parameter {_exposedParameter} not found in {nameof(AudioMixer)} {_audioMixer}");
-                return;
-            }
+            if (!_audioMixer.TrySetVolume(_exposedParameter, ref volume)) return;
 
             _volumePrevious = _volumeCurrent;
             _volumeCurrent = volume;

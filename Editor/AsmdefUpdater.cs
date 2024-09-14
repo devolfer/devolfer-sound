@@ -8,6 +8,7 @@ namespace devolfer.Sound
 {
     internal static class AsmdefUpdater
     {
+        private const string PackagePath = "Packages/com.devolfer.sound/";
         private const string PackageIdentifier = "devolfer.Sound.Runtime";
 
         private const string UniTaskTypeName = "Cysharp.Threading.Tasks.UniTask, UniTask";
@@ -16,7 +17,7 @@ namespace devolfer.Sound
         private static readonly AsmdefData.VersionDefine s_uniTaskVersionDefine = new()
             { name = "com.cysharp.unitask", expression = "", define = "UNITASK_INCLUDED" };
 
-        [InitializeOnLoadMethod]
+        // [InitializeOnLoadMethod]
         public static void UpdateAsmdef()
         {
             UpdateAsmdefDependency(PackageIdentifier, UniTaskTypeName, UniTaskReferenceName, s_uniTaskVersionDefine);
@@ -49,18 +50,19 @@ namespace devolfer.Sound
 
         private static string GetAsmdefPath(string packageIdentifier)
         {
-            string packagesPath = Path.Combine(Directory.GetCurrentDirectory(), "Packages");
-
-            foreach (string file in Directory.GetFiles(packagesPath, "*.asmdef", SearchOption.AllDirectories))
+            try
             {
-                if (file.Contains(packageIdentifier)) return file;
+                foreach (string file in Directory.GetFiles(
+                             Path.GetFullPath(PackagePath),
+                             "*.asmdef",
+                             SearchOption.AllDirectories))
+                {
+                    if (file.Contains(packageIdentifier)) return file;
+                }
             }
-
-            string assetsPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
-
-            foreach (string file in Directory.GetFiles(assetsPath, "*.asmdef", SearchOption.AllDirectories))
+            catch (Exception e)
             {
-                if (file.Contains(packageIdentifier)) return file;
+                // ignored
             }
 
             Debug.LogError("Could not find the .asmdef file in Packages or Assets folder.");
