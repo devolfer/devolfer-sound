@@ -655,9 +655,17 @@ namespace devolfer.Sound
         /// Registers a <see cref="MixerVolumeGroup"/> in the internal dictionary.
         /// </summary>
         /// <param name="group">The group to be registered.</param>
-        /// <remarks>Once registered, grants access through various methods like <see cref="SetMixerGroupVolume"/> or <see cref="FadeMixerGroupVolume"/>.</remarks>
+        /// <remarks>Once registered, grants access through various methods like <see cref="SetMixerGroupVolume"/> or <see cref="Fade(string,float,float,devolfer.Sound.Ease)"/>.</remarks>
         public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
         {
+            if (!group.AudioMixer.HasParameter(group.ExposedParameter))
+            {
+                Debug.LogError(
+                    $"You are trying to register a group with a non-existing exposed parameter {group.ExposedParameter} " +
+                    $"for the Audio Mixer {group.AudioMixer}. Please add the desired parameter in the Editor.");
+                return;
+            }
+
             _mixerVolumeGroups.TryAdd(group.ExposedParameter, group);
         }
 
@@ -734,7 +742,7 @@ namespace devolfer.Sound
         /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
         /// <param name="duration">The duration in seconds the fade will prolong.</param>
         /// <param name="ease">The easing applied when fading.</param>
-        public void FadeMixerGroupVolume(string exposedParameter, float targetVolume, float duration, Ease ease)
+        public void Fade(string exposedParameter, float targetVolume, float duration, Ease ease = Ease.Linear)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
@@ -746,7 +754,7 @@ namespace devolfer.Sound
 
             IEnumerator FadeRoutine()
             {
-                yield return mixerVolumeGroup.Fade(duration, targetVolume, ease);
+                yield return Fade(mixerVolumeGroup, duration, targetVolume, ease);
 
                 _mixerFadeRoutines.Remove(exposedParameter);
             }
@@ -762,8 +770,43 @@ namespace devolfer.Sound
                                                string fadeInExposedParameter,
                                                float duration)
         {
-            FadeMixerGroupVolume(fadeOutExposedParameter, 0, duration, Ease.Linear);
-            FadeMixerGroupVolume(fadeInExposedParameter, 1, duration, Ease.Linear);
+            Fade(fadeOutExposedParameter, 0, duration);
+            Fade(fadeInExposedParameter, 1, duration);
+        }
+
+        internal static IEnumerator Fade(MixerVolumeGroup mixerVolumeGroup,
+                                         float duration,
+                                         float targetVolume,
+                                         Ease ease)
+        {
+            return Fade(mixerVolumeGroup, duration, targetVolume, EasingFunctions.GetEasingFunction(ease));
+        }
+
+        internal static IEnumerator Fade(MixerVolumeGroup mixerVolumeGroup,
+                                         float duration,
+                                         float targetVolume,
+                                         Func<float, float> easeFunction)
+        {
+            targetVolume = Mathf.Clamp01(targetVolume);
+
+            if (duration <= 0)
+            {
+                mixerVolumeGroup.Set(targetVolume);
+                yield break;
+            }
+
+            float deltaTime = 0;
+            float startVolume = mixerVolumeGroup.VolumeCurrent;
+
+            while (deltaTime < duration)
+            {
+                deltaTime += Time.deltaTime;
+                mixerVolumeGroup.Set(Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration)));
+
+                yield return null;
+            }
+
+            mixerVolumeGroup.Set(targetVolume);
         }
 
         private bool MixerVolumeGroupRegistered(string exposedParameter, out MixerVolumeGroup mixerVolumeGroup)
@@ -852,6 +895,33 @@ namespace devolfer.Sound
 
             for (int i = 0; i < capacity; i++) preAllocatedT[i] = pool.Get();
             for (int i = preAllocatedT.Length - 1; i >= 0; i--) pool.Release(preAllocatedT[i]);
+        }
+    }
+
+    internal static class AudioMixerExtensions
+    {
+        internal static bool TrySetVolume(this AudioMixer mixer, string exposedParameter, ref float value)
+        {
+            value = Mathf.Clamp01(value);
+            float decibel = value != 0 ? Mathf.Log10(value) * 20 : -80;
+
+            return mixer.SetFloat(exposedParameter, decibel);
+        }
+
+        internal static bool TryGetVolume(this AudioMixer mixer, string exposedParameter, out float value)
+        {
+            value = 0;
+
+            if (!mixer.GetFloat(exposedParameter, out float decibel)) return false;
+
+            value = decibel > -80 ? Mathf.Pow(10, decibel / 20) : 0;
+
+            return true;
+        }
+
+        internal static bool HasParameter(this AudioMixer mixer, string exposedParameter)
+        {
+            return mixer.GetFloat(exposedParameter, out float _);
         }
     }
 
