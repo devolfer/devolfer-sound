@@ -1,10 +1,10 @@
 using System;
 using UnityEngine;
-#if UNITASK_INCLUDED
-using System.Threading;
-using Cysharp.Threading.Tasks;
-#else
 using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
+#if UNITASK_INCLUDED
+using Cysharp.Threading.Tasks;
 #endif
 
 namespace devolfer.Sound
@@ -18,12 +18,22 @@ namespace devolfer.Sound
         /// <summary>
         /// Is the SoundEntity playing?
         /// </summary>
-        public bool Playing => _setup && _source.isPlaying;
+        public bool Playing { get; private set; }
 
         /// <summary>
         /// Is the SoundEntity paused?
         /// </summary>
-        public bool Paused => _setup && _paused;
+        public bool Paused { get; private set; }
+
+        /// <summary>
+        /// Is the SoundEntity fading?
+        /// </summary>
+        public bool Fading { get; private set; }
+
+        /// <summary>
+        /// Is the SoundEntity stopping?
+        /// </summary>
+        public bool Stopping { get; private set; }
 
         private SoundManager _manager;
         private SoundProperties _properties;
@@ -35,22 +45,18 @@ namespace devolfer.Sound
         private Vector3 _followTargetOffset;
 
         private bool _setup;
-        private bool _paused;
 
-#if UNITASK_INCLUDED
-        private bool _uniPlaying;
-        private bool _uniFading;
-        private bool _uniStopping;
-        private CancellationTokenSource _ctsPlaying;
-        private CancellationTokenSource _ctsFading;
-        private CancellationTokenSource _ctsStopping;
-#else
+        private CancellationTokenSource _playCts;
+        private CancellationTokenSource _fadeCts;
+        private CancellationTokenSource _stopCts;
+        private Func<bool> SourceIsPlayingOrPausedPredicate => () => (_setup && _source.isPlaying) || Paused;
+        private Func<bool> PausedPredicate => () => Paused;
+
         private Coroutine _playRoutine;
         private Coroutine _fadeRoutine;
         private Coroutine _stopRoutine;
-        private WaitWhile _waitWhilePlayingOrPaused;
+        private WaitWhile _waitWhileSourceIsPlayingOrPaused;
         private WaitWhile _waitWhilePaused;
-#endif
 
         internal void Setup(SoundManager manager)
         {
@@ -59,17 +65,17 @@ namespace devolfer.Sound
             _transform = transform;
             if (!TryGetComponent(out _source)) _source = gameObject.AddComponent<AudioSource>();
 
-#if !UNITASK_INCLUDED
-            _waitWhilePlayingOrPaused = new WaitWhile(() => Playing || Paused);
-            _waitWhilePaused = new WaitWhile(() => Paused);
-#endif
+            _waitWhileSourceIsPlayingOrPaused = new WaitWhile(SourceIsPlayingOrPausedPredicate);
+            _waitWhilePaused = new WaitWhile(PausedPredicate);
 
             _setup = true;
         }
 
         private void LateUpdate()
         {
-            if (_hasFollowTarget && Playing && !_paused)
+            if (!_setup) return;
+            
+            if (_hasFollowTarget && Playing)
             {
                 _transform.position = _followTarget.position + _followTargetOffset;
             }
@@ -78,9 +84,9 @@ namespace devolfer.Sound
 #if UNITASK_INCLUDED
         private void OnDestroy()
         {
-            TaskHelper.Kill(ref _ctsPlaying);
-            TaskHelper.Kill(ref _ctsFading);
-            TaskHelper.Kill(ref _ctsStopping);
+            TaskHelper.Cancel(ref _playCts);
+            TaskHelper.Cancel(ref _fadeCts);
+            TaskHelper.Cancel(ref _stopCts);
         }
 #endif
 
@@ -91,6 +97,293 @@ namespace devolfer.Sound
                                   float fadeInDuration = .5f,
                                   Ease fadeInEase = Ease.Linear,
                                   Action onComplete = null)
+        {
+            ApplyEntityProperties(properties, followTarget, position);
+
+            _playRoutine = _manager.StartCoroutine(PlayRoutine());
+
+            return this;
+
+            IEnumerator PlayRoutine()
+            {
+                Playing = true;
+                _source.Play();
+
+                if (fadeIn)
+                {
+                    _source.volume = 0;
+                    yield return SoundManager.Fade(
+                        _source,
+                        fadeInDuration,
+                        properties.Volume,
+                        fadeInEase,
+                        _waitWhilePaused);
+                }
+
+                yield return _waitWhileSourceIsPlayingOrPaused;
+
+                onComplete?.Invoke();
+
+                _manager.Stop(this, false);
+                Playing = false;
+                _playRoutine = null;
+            }
+        }
+
+        internal async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(SoundProperties properties,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken == default)
+            {
+                cancellationToken = TaskHelper.CancelAndRefresh(ref _playCts);
+            }
+            else
+            {
+                TaskHelper.CancelAndRefresh(ref _playCts);
+                TaskHelper.Link(ref cancellationToken, ref _playCts);
+            }
+
+            ApplyEntityProperties(properties, followTarget, position);
+
+            Playing = true;
+            _source.Play();
+
+            if (fadeIn)
+            {
+                _source.volume = 0;
+
+                await SoundManager.FadeAsync(
+                    _source,
+                    fadeInDuration,
+                    properties.Volume,
+                    fadeInEase,
+                    PausedPredicate,
+                    cancellationToken);
+            }
+
+#if UNITASK_INCLUDED
+            await UniTask.WaitWhile(SourceIsPlayingOrPausedPredicate, cancellationToken: cancellationToken);
+#else
+            await TaskHelper.WaitWhile(SourceIsPlayingOrPausedPredicate, cancellationToken: cancellationToken);
+#endif
+
+            await _manager.StopAsync(this, false, cancellationToken: cancellationToken);
+
+            Playing = false;
+        }
+
+        internal void Pause()
+        {
+            if (Paused) return;
+
+            Paused = true;
+            _source.Pause();
+        }
+
+        internal void Resume()
+        {
+            if (!Paused) return;
+
+            _source.UnPause();
+            Paused = false;
+        }
+
+        internal void Stop(bool fadeOut = true,
+                           float fadeOutDuration = .5f,
+                           Ease fadeOutEase = Ease.Linear,
+                           Action onComplete = null)
+        {
+            if (Stopping && fadeOut) return;
+            
+            if (_stopRoutine != null) _manager.StopCoroutine(_stopRoutine);
+            _stopRoutine = null;
+            TaskHelper.Cancel(ref _stopCts);
+            Stopping = false;
+
+            if (Playing)
+            {
+                if (_playRoutine != null) _manager.StopCoroutine(_playRoutine);
+                _playRoutine = null;
+                TaskHelper.Cancel(ref _playCts);
+                Playing = false;
+            }
+
+            if (Fading)
+            {
+                if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
+                _fadeRoutine = null;
+                TaskHelper.Cancel(ref _fadeCts);
+                Fading = false;
+            }
+
+            if (!fadeOut || Paused)
+            {
+                _source.Stop();
+                ResetEntityProperties();
+
+                onComplete?.Invoke();
+            }
+            else
+            {
+                _stopRoutine = _manager.StartCoroutine(StopRoutine());
+            }
+
+            return;
+
+            IEnumerator StopRoutine()
+            {
+                Stopping = true;
+                
+                yield return SoundManager.Fade(_source, fadeOutDuration, 0, fadeOutEase);
+
+                _source.Stop();
+                ResetEntityProperties();
+
+                onComplete?.Invoke();
+
+                Stopping = false;
+                _stopRoutine = null;
+            }
+        }
+
+        internal async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            StopAsync(bool fadeOut = true,
+                      float fadeOutDuration = .5f,
+                      Ease fadeOutEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            if (Stopping && fadeOut) return;
+            
+            if (_stopRoutine != null) _manager.StopCoroutine(_stopRoutine);
+            _stopRoutine = null;
+            TaskHelper.Cancel(ref _stopCts);
+            Stopping = false;
+
+            if (Playing)
+            {
+                if (_playRoutine != null) _manager.StopCoroutine(_playRoutine);
+                _playRoutine = null;
+                TaskHelper.Cancel(ref _playCts);
+                Playing = false;
+            }
+
+            if (Fading)
+            {
+                if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
+                _fadeRoutine = null;
+                TaskHelper.Cancel(ref _fadeCts);
+                Fading = false;
+            }
+
+            if (!fadeOut || Paused)
+            {
+                _source.Stop();
+                ResetEntityProperties();
+            }
+            else
+            {
+                if (cancellationToken == default)
+                {
+                    cancellationToken = TaskHelper.CancelAndRefresh(ref _stopCts);
+                }
+                else
+                {
+                    TaskHelper.CancelAndRefresh(ref _stopCts);
+                    TaskHelper.Link(ref cancellationToken, ref _stopCts);
+                }
+
+                Stopping = true;
+
+                await SoundManager.FadeAsync(
+                    _source,
+                    fadeOutDuration,
+                    0,
+                    fadeOutEase,
+                    cancellationToken: cancellationToken);
+
+                _source.Stop();
+                ResetEntityProperties();
+
+                Stopping = false;
+            }
+        }
+
+        internal void Fade(float duration, float targetVolume, Ease ease = Ease.Linear)
+        {
+            if (Fading)
+            {
+                if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
+                _fadeRoutine = null;
+                TaskHelper.Cancel(ref _fadeCts);
+                Fading = false;
+            }
+            
+            _fadeRoutine = _manager.StartCoroutine(FadeRoutine());
+
+            return;
+
+            IEnumerator FadeRoutine()
+            {
+                Fading = true;
+                
+                yield return SoundManager.Fade(_source, duration, targetVolume, ease, _waitWhilePaused);
+
+                Fading = false;
+                _fadeRoutine = null;
+            }
+        }
+
+        internal async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeAsync(float duration,
+                      float targetVolume,
+                      Ease ease = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken == default)
+            {
+                cancellationToken = TaskHelper.CancelAndRefresh(ref _fadeCts);
+            }
+            else
+            {
+                TaskHelper.CancelAndRefresh(ref _fadeCts);
+                TaskHelper.Link(ref cancellationToken, ref _fadeCts);
+            }
+
+            Fading = true;
+
+            await SoundManager.FadeAsync(
+                _source,
+                duration,
+                targetVolume,
+                ease,
+                PausedPredicate,
+                cancellationToken);
+
+            Fading = false;
+        }
+
+        private void ApplyEntityProperties(SoundProperties properties, Transform followTarget, Vector3 position)
         {
             _properties = properties;
             _properties.ApplyOn(ref _source);
@@ -105,205 +398,11 @@ namespace devolfer.Sound
             {
                 _transform.position = position;
             }
-
-#if UNITASK_INCLUDED
-            PlayTask(TaskHelper.Refresh(ref _ctsPlaying)).Forget();
-
-            return this;
-
-            async UniTaskVoid PlayTask(CancellationToken cancellationToken)
-            {
-                _uniPlaying = true;
-
-                _source.Play();
-
-                if (fadeIn)
-                {
-                    _source.volume = 0;
-                    await SoundManager.Fade(
-                        _source,
-                        fadeInDuration,
-                        properties.Volume,
-                        fadeInEase,
-                        cancellationToken: cancellationToken);
-                }
-
-                await UniTask.WaitWhile(() => Playing || Paused, cancellationToken: cancellationToken);
-
-                onComplete?.Invoke();
-
-                _manager.Stop(this, false);
-
-                _uniPlaying = false;
-            }
-#else
-            _playRoutine = _manager.StartCoroutine(PlayRoutine());
-
-            return this;
-            
-            IEnumerator PlayRoutine()
-            {
-                _source.Play();
-
-                if (fadeIn)
-                {
-                    _source.volume = 0;
-                    yield return SoundManager.Fade(_source, fadeInDuration, properties.Volume, fadeInEase);
-                }
-
-                yield return _waitWhilePlayingOrPaused;
-
-                onComplete?.Invoke();
-
-                _manager.Stop(this, false);
-
-                _playRoutine = null;
-            }
-#endif
         }
 
-        internal void Pause()
+        private void ResetEntityProperties()
         {
-            if (Paused) return;
-
-            _paused = true;
-            _source.Pause();
-        }
-
-        internal void Resume()
-        {
-            if (!Paused) return;
-
-            _source.UnPause();
-            _paused = false;
-        }
-
-        internal void Stop(bool fadeOut = true,
-                           float fadeOutDuration = .5f,
-                           Ease fadeOutEase = Ease.Linear,
-                           Action onComplete = null)
-        {
-#if UNITASK_INCLUDED
-            if (_uniStopping) return;
-
-            if (_uniPlaying)
-            {
-                TaskHelper.Kill(ref _ctsPlaying);
-                _uniPlaying = false;
-            }
-
-            if (_uniFading)
-            {
-                TaskHelper.Kill(ref _ctsFading);
-                _uniFading = false;
-            }
-
-            if (!fadeOut || Paused)
-            {
-                _source.Stop();
-                ResetEntity();
-
-                onComplete?.Invoke();
-            }
-            else
-            {
-                StopTask(TaskHelper.Refresh(ref _ctsStopping)).Forget();
-            }
-
-            return;
-
-            async UniTaskVoid StopTask(CancellationToken cancellationToken)
-            {
-                _uniStopping = true;
-
-                await SoundManager.Fade(_source, fadeOutDuration, 0, fadeOutEase, cancellationToken: cancellationToken);
-
-                _source.Stop();
-                ResetEntity();
-
-                onComplete?.Invoke();
-
-                _uniStopping = false;
-            }
-#else
-            if (_stopRoutine != null) return;
-
-            if (_playRoutine != null)
-            {
-                _manager.StopCoroutine(_playRoutine);
-                _playRoutine = null;
-            }
-
-            if (_fadeRoutine != null)
-            {
-                _manager.StopCoroutine(_fadeRoutine);
-                _fadeRoutine = null;
-            }
-
-            if (!fadeOut || Paused)
-            {
-                _source.Stop();
-                ResetEntity();
-
-                onComplete?.Invoke();
-            }
-            else
-            {
-                _stopRoutine = _manager.StartCoroutine(StopRoutine());
-            }
-
-            return;
-
-            IEnumerator StopRoutine()
-            {
-                yield return SoundManager.Fade(_source, fadeOutDuration, 0, fadeOutEase);
-
-                _source.Stop();
-                ResetEntity();
-
-                onComplete?.Invoke();
-
-                _stopRoutine = null;
-            }
-#endif
-        }
-
-        internal void Fade(float duration, float targetVolume, Ease ease = Ease.Linear)
-        {
-            if (!_setup) return;
-
-#if UNITASK_INCLUDED
-            FadeTask(TaskHelper.Refresh(ref _ctsFading)).Forget();
-
-            return;
-
-            async UniTaskVoid FadeTask(CancellationToken cancellationToken)
-            {
-                _uniFading = true;
-
-                await SoundManager.Fade(_source, duration, targetVolume, ease, cancellationToken: cancellationToken);
-
-                _uniFading = false;
-            }
-#else
-            if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
-
-            _fadeRoutine = _manager.StartCoroutine(FadeRoutine());
-
-            return;
-
-            IEnumerator FadeRoutine()
-            {
-                yield return SoundManager.Fade(_source, duration, targetVolume, ease, _waitWhilePaused);
-
-                _fadeRoutine = null;
-            }
-#endif
-        }
-
-        private void ResetEntity()
-        {
-            _paused = false;
+            Paused = false;
 
             if (_hasFollowTarget)
             {

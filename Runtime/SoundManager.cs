@@ -1,11 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Pool;
 #if UNITASK_INCLUDED
-using System.Threading;
 using Cysharp.Threading.Tasks;
 #endif
 
@@ -149,6 +150,115 @@ namespace devolfer.Sound
             return Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
         }
 
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(out SoundEntity entity,
+                      SoundProperties properties,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            entity = _soundEntityPool.Get();
+            _entitiesPlaying.Add(entity);
+
+            return entity.PlayAsync(
+                properties,
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(SoundProperties properties,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            return PlayAsync(
+                out _,
+                properties,
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(out SoundEntity entity,
+                      AudioSource audioSource,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            if (audioSource.isPlaying) audioSource.Stop();
+            audioSource.enabled = false;
+
+            SoundProperties properties = audioSource;
+
+            return PlayAsync(
+                out entity,
+                properties,
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(AudioSource audioSource,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            return PlayAsync(
+                out _,
+                audioSource,
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
         /// <summary>
         /// Pauses sound playback.
         /// </summary>
@@ -215,6 +325,40 @@ namespace devolfer.Sound
             }
         }
 
+        public async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            StopAsync(SoundEntity entity,
+                      bool fadeOut = true,
+                      float fadeOutDuration = .5f,
+                      Ease fadeOutEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            bool playingEntity = _entitiesPlaying.Contains(entity);
+            bool pausedEntity = _entitiesPaused.Contains(entity);
+
+            if (!playingEntity && !pausedEntity) return;
+
+            _entitiesStopping.Add(entity);
+            await entity.StopAsync(fadeOut, fadeOutDuration, fadeOutEase, cancellationToken);
+
+            ReleaseEntity();
+
+            return;
+
+            void ReleaseEntity()
+            {
+                if (playingEntity) _entitiesPlaying.Remove(entity);
+                if (pausedEntity) _entitiesPaused.Remove(entity);
+                _entitiesStopping.Remove(entity);
+
+                _soundEntityPool.Release(entity);
+            }
+        }
+
         /// <summary>
         /// Pauses all currently playing sound entities.
         /// </summary>
@@ -269,6 +413,43 @@ namespace devolfer.Sound
             _entitiesPaused.Clear();
         }
 
+        public async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            StopAllAsync(bool fadeOut = true,
+                         float fadeOutDuration = 1,
+                         Ease fadeOutEase = Ease.Linear,
+                         CancellationToken cancellationToken = default)
+        {
+#if UNITASK_INCLUDED
+            List<UniTask> stopTasks = new();
+#else
+            List<Task> stopTasks = new();
+#endif
+
+            foreach (SoundEntity entity in _entitiesPlaying)
+            {
+                stopTasks.Add(StopAsync(entity, fadeOut, fadeOutDuration, fadeOutEase, cancellationToken));
+            }
+
+            foreach (SoundEntity entity in _entitiesPaused)
+            {
+                stopTasks.Add(entity.StopAsync(false, cancellationToken: cancellationToken));
+                _soundEntityPool.Release(entity);
+            }
+
+            _entitiesPaused.Clear();
+
+#if UNITASK_INCLUDED
+            await UniTask.WhenAll(stopTasks);
+#else
+            await Task.WhenAll(stopTasks);
+#endif
+        }
+
         /// <summary>
         /// Fades sound volume.
         /// </summary>
@@ -284,6 +465,25 @@ namespace devolfer.Sound
             if (_entitiesPaused.Contains(entity)) Resume(entity);
 
             entity.Fade(duration, targetVolume, ease);
+        }
+
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeAsync(SoundEntity entity,
+                      float targetVolume,
+                      float duration,
+                      Ease ease = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            if (_entitiesStopping.Contains(entity)) return default;
+
+            if (_entitiesPaused.Contains(entity)) Resume(entity);
+
+            return entity.FadeAsync(duration, targetVolume, ease, cancellationToken);
         }
 
         /// <summary>
@@ -307,60 +507,32 @@ namespace devolfer.Sound
             return Play(fadeInProperties, followTarget, fadeInPosition, true, duration);
         }
 
+        public
 #if UNITASK_INCLUDED
-        internal static async UniTask Fade(AudioSource audioSource,
-                                           float duration,
-                                           float targetVolume,
-                                           Ease ease = Ease.Linear,
-                                           Func<bool> waitWhilePredicate = default,
-                                           CancellationToken cancellationToken = default)
-        {
-            await Fade(
-                audioSource,
-                duration,
-                targetVolume,
-                EasingFunctions.GetEasingFunction(ease),
-                waitWhilePredicate,
-                cancellationToken);
-        }
-
-        internal static async UniTask Fade(AudioSource audioSource,
-                                           float duration,
-                                           float targetVolume,
-                                           Func<float, float> easeFunction,
-                                           Func<bool> waitWhilePredicate = default,
-                                           CancellationToken cancellationToken = default)
-        {
-            targetVolume = Mathf.Clamp01(targetVolume);
-
-            if (duration <= 0)
-            {
-                audioSource.volume = targetVolume;
-                return;
-            }
-
-            float deltaTime = 0;
-            float startVolume = audioSource.volume;
-
-            while (deltaTime < duration)
-            {
-                deltaTime += Time.deltaTime;
-                audioSource.volume = Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration));
-
-                if (waitWhilePredicate != default)
-                {
-                    await UniTask.WaitWhile(waitWhilePredicate, cancellationToken: cancellationToken);
-                }
-                else
-                {
-                    await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken: cancellationToken);
-                }
-            }
-
-            audioSource.volume = targetVolume;
-        }
-
+            UniTask
 #else
+            Task
+#endif
+            CrossFadeAsync(out SoundEntity entity,
+                           float duration,
+                           SoundEntity fadeOutEntity,
+                           SoundProperties fadeInProperties,
+                           Transform followTarget = null,
+                           Vector3 fadeInPosition = default,
+                           CancellationToken cancellationToken = default)
+        {
+            _ = StopAsync(fadeOutEntity, fadeOutDuration: duration, cancellationToken: cancellationToken);
+
+            return PlayAsync(
+                out entity,
+                fadeInProperties,
+                followTarget,
+                fadeInPosition,
+                true,
+                duration,
+                cancellationToken: cancellationToken);
+        }
+
         internal static IEnumerator Fade(AudioSource audioSource,
                                          float duration,
                                          float targetVolume,
@@ -402,7 +574,78 @@ namespace devolfer.Sound
 
             audioSource.volume = targetVolume;
         }
+
+        internal static
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
 #endif
+            FadeAsync(AudioSource audioSource,
+                      float duration,
+                      float targetVolume,
+                      Ease ease = Ease.Linear,
+                      Func<bool> waitWhilePredicate = default,
+                      CancellationToken cancellationToken = default)
+        {
+            return FadeAsync(
+                audioSource,
+                duration,
+                targetVolume,
+                EasingFunctions.GetEasingFunction(ease),
+                waitWhilePredicate,
+                cancellationToken);
+        }
+
+        internal static async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeAsync(AudioSource audioSource,
+                      float duration,
+                      float targetVolume,
+                      Func<float, float> easeFunction,
+                      Func<bool> waitWhilePredicate = default,
+                      CancellationToken cancellationToken = default)
+        {
+            targetVolume = Mathf.Clamp01(targetVolume);
+
+            if (duration <= 0)
+            {
+                audioSource.volume = targetVolume;
+                return;
+            }
+
+            float deltaTime = 0;
+            float startVolume = audioSource.volume;
+
+            while (deltaTime < duration)
+            {
+                deltaTime += Time.deltaTime;
+                audioSource.volume = Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration));
+
+                if (waitWhilePredicate != default)
+                {
+#if UNITASK_INCLUDED
+                    await UniTask.WaitWhile(waitWhilePredicate, cancellationToken: cancellationToken);
+#else
+                    await TaskHelper.WaitWhile(waitWhilePredicate, cancellationToken);
+#endif
+                }
+                else
+                {
+#if UNITASK_INCLUDED
+                    await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken: cancellationToken);
+#else
+                    await Task.Yield();
+#endif
+                }
+            }
+
+            audioSource.volume = targetVolume;
+        }
 
         #endregion
 
@@ -612,25 +855,42 @@ namespace devolfer.Sound
         }
     }
 
-#if UNITASK_INCLUDED
     internal static class TaskHelper
     {
-        internal static CancellationToken Refresh(ref CancellationTokenSource cancellationTokenSource)
+        internal static async Task WaitWhile(Func<bool> waitWhilePredicate,
+                                             CancellationToken cancellationToken = default)
         {
-            Kill(ref cancellationTokenSource);
+            while (waitWhilePredicate())
+            {
+                if (cancellationToken.IsCancellationRequested) return;
+
+                await Task.Yield();
+            }
+        }
+
+        internal static void Link(ref CancellationToken externalCancellationToken,
+                                  ref CancellationTokenSource cancellationTokenSource)
+        {
+            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+                externalCancellationToken,
+                cancellationTokenSource.Token);
+        }
+
+        internal static CancellationToken CancelAndRefresh(ref CancellationTokenSource cancellationTokenSource)
+        {
+            Cancel(ref cancellationTokenSource);
 
             cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
             return cancellationTokenSource.Token;
         }
-        
-        internal static void Kill(ref CancellationTokenSource cancellationTokenSource)
+
+        internal static void Cancel(ref CancellationTokenSource cancellationTokenSource)
         {
             cancellationTokenSource?.Cancel();
             cancellationTokenSource?.Dispose();
             cancellationTokenSource = null;
         }
     }
-#endif
 }
