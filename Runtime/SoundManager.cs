@@ -29,17 +29,19 @@ namespace devolfer.Sound
             "\n\nIf none are provided, the default Audio Mixer and groups bundled with the package will be used.")]
         [SerializeField] private MixerVolumeGroup[] _mixerVolumeGroupsDefault;
 
+        private ObjectPool<SoundEntity> _soundEntityPool;
+
         private HashSet<SoundEntity> _entitiesPlaying;
         private HashSet<SoundEntity> _entitiesPaused;
         private HashSet<SoundEntity> _entitiesStopping;
+
         private Dictionary<AudioSource, SoundEntity> _audioSourcesPlaying;
         private Dictionary<AudioSource, SoundEntity> _audioSourcesPaused;
         private Dictionary<AudioSource, SoundEntity> _audioSourcesStopping;
 
-        private ObjectPool<SoundEntity> _soundEntityPool;
-
         private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
         private Dictionary<string, Coroutine> _mixerFadeRoutines;
+        private Dictionary<string, CancellationTokenSource> _mixerFadeCancellationTokenSources;
 
         #region Setup
 
@@ -86,6 +88,7 @@ namespace devolfer.Sound
         {
             _mixerVolumeGroups = new Dictionary<string, MixerVolumeGroup>();
             _mixerFadeRoutines = new Dictionary<string, Coroutine>();
+            _mixerFadeCancellationTokenSources = new Dictionary<string, CancellationTokenSource>();
 
             if (_mixerVolumeGroupsDefault == null || _mixerVolumeGroupsDefault.Length == 0)
             {
@@ -1035,7 +1038,7 @@ namespace devolfer.Sound
         /// Registers a <see cref="MixerVolumeGroup"/> in the internal dictionary.
         /// </summary>
         /// <param name="group">The group to be registered.</param>
-        /// <remarks>Once registered, grants access through various methods like <see cref="SetMixerGroupVolume"/> or <see cref="Fade(string,float,float,devolfer.Sound.Ease)"/>.</remarks>
+        /// <remarks>Once registered, grants access through various methods like <see cref="SetMixerGroupVolume"/> or <see cref="FadeMixerGroupVolume"/>.</remarks>
         public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
         {
             if (!group.AudioMixer.HasParameter(group.ExposedParameter))
@@ -1069,7 +1072,7 @@ namespace devolfer.Sound
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
-            StopMixerFadeRoutine(exposedParameter);
+            StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Set(value);
         }
@@ -1083,7 +1086,7 @@ namespace devolfer.Sound
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
-            StopMixerFadeRoutine(exposedParameter);
+            StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Increase();
         }
@@ -1097,7 +1100,7 @@ namespace devolfer.Sound
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
-            StopMixerFadeRoutine(exposedParameter);
+            StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Decrease();
         }
@@ -1111,7 +1114,7 @@ namespace devolfer.Sound
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
-            StopMixerFadeRoutine(exposedParameter);
+            StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Mute(value);
         }
@@ -1123,11 +1126,16 @@ namespace devolfer.Sound
         /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
         /// <param name="duration">The duration in seconds the fade will prolong.</param>
         /// <param name="ease">The easing applied when fading.</param>
-        public void Fade(string exposedParameter, float targetVolume, float duration, Ease ease = Ease.Linear)
+        /// <param name="onComplete">Optional callback once mixer completes fading.</param>
+        public void FadeMixerGroupVolume(string exposedParameter,
+                                         float targetVolume,
+                                         float duration,
+                                         Ease ease = Ease.Linear,
+                                         Action onComplete = null)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
-            StopMixerFadeRoutine(exposedParameter);
+            StopMixerFading(exposedParameter);
 
             _mixerFadeRoutines.TryAdd(exposedParameter, StartCoroutine(DoFadeRoutine()));
 
@@ -1135,10 +1143,38 @@ namespace devolfer.Sound
 
             IEnumerator DoFadeRoutine()
             {
-                yield return FadeRoutine(mixerVolumeGroup, duration, targetVolume, ease);
+                yield return FadeMixerRoutine(mixerVolumeGroup, duration, targetVolume, ease);
+
+                onComplete?.Invoke();
 
                 _mixerFadeRoutines.Remove(exposedParameter);
             }
+        }
+
+        public async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeMixerGroupVolumeAsync(string exposedParameter,
+                                      float targetVolume,
+                                      float duration,
+                                      Ease ease = Ease.Linear,
+                                      CancellationToken cancellationToken = default)
+        {
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+
+            StopMixerFading(exposedParameter);
+
+            CancellationTokenSource cts = new();
+            TaskHelper.Link(ref cancellationToken, ref cts);
+
+            _mixerFadeCancellationTokenSources.TryAdd(exposedParameter, cts);
+
+            await FadeMixerTask(mixerVolumeGroup, duration, targetVolume, ease, cancellationToken);
+
+            _mixerFadeCancellationTokenSources.Remove(exposedParameter);
         }
 
         /// <summary>
@@ -1147,26 +1183,44 @@ namespace devolfer.Sound
         /// <param name="fadeOutExposedParameter">The exposed parameter with which to access the group fading out, e.g. 'VolumeSFX'.</param>
         /// <param name="fadeInExposedParameter">The exposed parameter with which to access the group fading in, e.g. 'VolumeMusic'.</param>
         /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="onComplete">Optional callback once mixer completes cross-fading.</param>
         public void CrossFadeMixerGroupVolumes(string fadeOutExposedParameter,
                                                string fadeInExposedParameter,
-                                               float duration)
+                                               float duration,
+                                               Action onComplete = null)
         {
-            Fade(fadeOutExposedParameter, 0, duration);
-            Fade(fadeInExposedParameter, 1, duration);
+            FadeMixerGroupVolume(fadeOutExposedParameter, 0, duration);
+            FadeMixerGroupVolume(fadeInExposedParameter, 1, duration, onComplete: onComplete);
         }
 
-        internal static IEnumerator FadeRoutine(MixerVolumeGroup mixerVolumeGroup,
-                                                float duration,
-                                                float targetVolume,
-                                                Ease ease)
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            CrossFadeMixerGroupVolumesAsync(string fadeOutExposedParameter,
+                                            string fadeInExposedParameter,
+                                            float duration,
+                                            CancellationToken cancellationToken = default)
         {
-            return FadeRoutine(mixerVolumeGroup, duration, targetVolume, EasingFunctions.GetEasingFunction(ease));
+            _ = FadeMixerGroupVolumeAsync(fadeOutExposedParameter, 0, duration, cancellationToken: cancellationToken);
+
+            return FadeMixerGroupVolumeAsync(fadeInExposedParameter, 1, duration, cancellationToken: cancellationToken);
         }
 
-        internal static IEnumerator FadeRoutine(MixerVolumeGroup mixerVolumeGroup,
-                                                float duration,
-                                                float targetVolume,
-                                                Func<float, float> easeFunction)
+        private static IEnumerator FadeMixerRoutine(MixerVolumeGroup mixerVolumeGroup,
+                                                    float duration,
+                                                    float targetVolume,
+                                                    Ease ease)
+        {
+            return FadeMixerRoutine(mixerVolumeGroup, duration, targetVolume, EasingFunctions.GetEasingFunction(ease));
+        }
+
+        private static IEnumerator FadeMixerRoutine(MixerVolumeGroup mixerVolumeGroup,
+                                                    float duration,
+                                                    float targetVolume,
+                                                    Func<float, float> easeFunction)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
 
@@ -1190,6 +1244,64 @@ namespace devolfer.Sound
             mixerVolumeGroup.Set(targetVolume);
         }
 
+        private static
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeMixerTask(MixerVolumeGroup mixerVolumeGroup,
+                          float duration,
+                          float targetVolume,
+                          Ease ease,
+                          CancellationToken cancellationToken = default)
+        {
+            return FadeMixerTask(
+                mixerVolumeGroup,
+                duration,
+                targetVolume,
+                EasingFunctions.GetEasingFunction(ease),
+                cancellationToken);
+        }
+
+        private static async
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            FadeMixerTask(MixerVolumeGroup mixerVolumeGroup,
+                          float duration,
+                          float targetVolume,
+                          Func<float, float> easeFunction,
+                          CancellationToken cancellationToken = default)
+        {
+            targetVolume = Mathf.Clamp01(targetVolume);
+
+            if (duration <= 0)
+            {
+                mixerVolumeGroup.Set(targetVolume);
+                return;
+            }
+
+            float deltaTime = 0;
+            float startVolume = mixerVolumeGroup.VolumeCurrent;
+
+            while (deltaTime < duration)
+            {
+                deltaTime += Time.deltaTime;
+                mixerVolumeGroup.Set(Mathf.Lerp(startVolume, targetVolume, easeFunction(deltaTime / duration)));
+
+#if UNITASK_INCLUDED
+                await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken: cancellationToken);
+#else
+                await Task.Yield();
+#endif
+            }
+
+            mixerVolumeGroup.Set(targetVolume);
+        }
+
         private bool MixerVolumeGroupRegistered(string exposedParameter, out MixerVolumeGroup mixerVolumeGroup)
         {
             if (_mixerVolumeGroups.TryGetValue(exposedParameter, out mixerVolumeGroup)) return true;
@@ -1198,12 +1310,17 @@ namespace devolfer.Sound
             return false;
         }
 
-        private void StopMixerFadeRoutine(string exposedParameter)
+        private void StopMixerFading(string exposedParameter)
         {
-            if (!_mixerFadeRoutines.TryGetValue(exposedParameter, out Coroutine fadeRoutine)) return;
+            if (_mixerFadeRoutines.Remove(exposedParameter, out Coroutine fadeRoutine))
+            {
+                StopCoroutine(fadeRoutine);
+            }
 
-            StopCoroutine(fadeRoutine);
-            _mixerFadeRoutines.Remove(exposedParameter);
+            if (_mixerFadeCancellationTokenSources.Remove(exposedParameter, out CancellationTokenSource cts))
+            {
+                TaskHelper.Cancel(ref cts);
+            }
         }
 
         #endregion
@@ -1319,10 +1436,10 @@ namespace devolfer.Sound
             }
         }
 
-        internal static void Link(ref CancellationToken externalCancellationToken,
-                                  ref CancellationTokenSource cancellationTokenSource)
+        internal static CancellationTokenSource Link(ref CancellationToken externalCancellationToken,
+                                                     ref CancellationTokenSource cancellationTokenSource)
         {
-            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+            return cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
                 externalCancellationToken,
                 cancellationTokenSource.Token);
         }
