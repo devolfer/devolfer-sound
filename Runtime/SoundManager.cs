@@ -109,7 +109,7 @@ namespace devolfer.Sound
         #region Entity
 
         /// <summary>
-        /// Plays a sound with the specified properties.
+        /// Plays a sound with the specified sound properties.
         /// </summary>
         /// <param name="properties">The properties that define the sound.</param>
         /// <param name="followTarget">Optional target the sound will follow while playing.</param>
@@ -117,7 +117,7 @@ namespace devolfer.Sound
         /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
         /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
         /// <param name="fadeInEase">The easing applied when fading in.</param>
-        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looped sounds).</param>
+        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looping sounds).</param>
         /// <returns>The <see cref="SoundEntity"/> used for playback.</returns>
         public SoundEntity Play(SoundProperties properties,
                                 Transform followTarget = null,
@@ -134,7 +134,7 @@ namespace devolfer.Sound
         }
 
         /// <summary>
-        /// Plays a sound with the properties of an <see cref="AudioSource"/> and automatically disables it.
+        /// Plays a sound with the properties of an <see cref="AudioSource"/>.
         /// </summary>
         /// <param name="audioSource">The source of which the sound properties will be derived from.</param>
         /// <param name="followTarget">Optional target the sound will follow while playing.</param>
@@ -142,8 +142,9 @@ namespace devolfer.Sound
         /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
         /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
         /// <param name="fadeInEase">The easing applied when fading in.</param>
-        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looped sounds).</param>
+        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looping sounds).</param>
         /// <returns>The <see cref="SoundEntity"/> used for playback.</returns>
+        /// <remarks>The original <see cref="AudioSource"/> will be disabled.</remarks>
         public SoundEntity Play(AudioSource audioSource,
                                 Transform followTarget = null,
                                 Vector3 position = default,
@@ -157,6 +158,35 @@ namespace devolfer.Sound
             _audioSourcesPlaying.TryAdd(audioSource, entity);
 
             return entity.Play(audioSource, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+        }
+
+        /// <summary>
+        /// Plays a sound with the given <see cref="AudioClip"/>.
+        /// </summary>
+        /// <param name="audioClip">The clip to be played.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="onComplete">Optional callback once sound completes playing (not applicable for looping sounds).</param>
+        /// <returns>The <see cref="SoundEntity"/> used for playback.</returns>
+        public SoundEntity Play(AudioClip audioClip,
+                                Transform followTarget = null,
+                                Vector3 position = default,
+                                bool fadeIn = false,
+                                float fadeInDuration = .5f,
+                                Ease fadeInEase = Ease.Linear,
+                                Action onComplete = null)
+        {
+            return Play(
+                new SoundProperties(audioClip),
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                onComplete);
         }
 
         public
@@ -178,31 +208,6 @@ namespace devolfer.Sound
             _entitiesPlaying.Add(entity);
 
             return entity.PlayAsync(
-                properties,
-                followTarget,
-                position,
-                fadeIn,
-                fadeInDuration,
-                fadeInEase,
-                cancellationToken);
-        }
-
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(SoundProperties properties,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
-        {
-            return PlayAsync(
-                out _,
                 properties,
                 followTarget,
                 position,
@@ -247,6 +252,59 @@ namespace devolfer.Sound
 #else
             Task
 #endif
+            PlayAsync(out SoundEntity entity,
+                      AudioClip audioClip,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            entity = _soundEntityPool.Get();
+            _entitiesPlaying.Add(entity);
+
+            return entity.PlayAsync(
+                new SoundProperties(audioClip),
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(SoundProperties properties,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            return PlayAsync(
+                out _,
+                properties,
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
             PlayAsync(AudioSource audioSource,
                       Transform followTarget = null,
                       Vector3 position = default,
@@ -266,11 +324,36 @@ namespace devolfer.Sound
                 cancellationToken);
         }
 
+        public
+#if UNITASK_INCLUDED
+            UniTask
+#else
+            Task
+#endif
+            PlayAsync(AudioClip audioClip,
+                      Transform followTarget = null,
+                      Vector3 position = default,
+                      bool fadeIn = false,
+                      float fadeInDuration = .5f,
+                      Ease fadeInEase = Ease.Linear,
+                      CancellationToken cancellationToken = default)
+        {
+            return PlayAsync(
+                out _,
+                new SoundProperties(audioClip),
+                followTarget,
+                position,
+                fadeIn,
+                fadeInDuration,
+                fadeInEase,
+                cancellationToken);
+        }
+
         /// <summary>
-        /// Pauses sound playback.
+        /// Pauses a playing sound.
         /// </summary>
         /// <param name="entity">The sound entity that is currently playing.</param>
-        /// <remarks>Has no effect if the entity is not playing or currently stopping.</remarks>
+        /// <remarks>Has no effect if the entity is currently stopping.</remarks>
         public void Pause(SoundEntity entity)
         {
             if (!_entitiesPlaying.Contains(entity)) return;
@@ -294,10 +377,10 @@ namespace devolfer.Sound
         }
 
         /// <summary>
-        /// Resumes sound playback.
+        /// Resumes a paused sound.
         /// </summary>
         /// <param name="entity">The sound entity that is currently paused.</param>
-        /// <remarks>Has no effect if the entity is not paused or currently stopping.</remarks>
+        /// <remarks>Has no effect if the entity is currently stopping.</remarks>
         public void Resume(SoundEntity entity)
         {
             if (!_entitiesPaused.Contains(entity)) return;
@@ -321,7 +404,7 @@ namespace devolfer.Sound
         }
 
         /// <summary>
-        /// Stops sound playback.
+        /// Stops playback of a playing/paused sound.
         /// </summary>
         /// <param name="entity">The sound entity that is either currently playing or paused.</param>
         /// <param name="fadeOut">True by default. Set this to false, if the volume should not fade out when stopping.</param>
@@ -571,14 +654,14 @@ namespace devolfer.Sound
         }
 
         /// <summary>
-        /// Fades sound volume.
+        /// Fades the volume of a playing sound.
         /// </summary>
         /// <param name="entity">The sound entity that is currently playing or paused.</param>
         /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
         /// <param name="duration">The duration in seconds the fade will prolong.</param>
         /// <param name="ease">The easing applied when fading.</param>
         /// <param name="onComplete">Optional callback once sound completes fading.</param>
-        /// <remarks>Has no effect on entities currently stopped/stopping.</remarks>
+        /// <remarks>Has no effect on entities currently stopping.</remarks>
         public void Fade(SoundEntity entity,
                          float targetVolume,
                          float duration,
@@ -798,10 +881,10 @@ namespace devolfer.Sound
         }
 
         private static IEnumerator FadeRoutine(AudioSource audioSource,
-                                                float duration,
-                                                float targetVolume,
-                                                Func<float, float> easeFunction,
-                                                WaitWhile waitWhilePredicate = null)
+                                               float duration,
+                                               float targetVolume,
+                                               Func<float, float> easeFunction,
+                                               WaitWhile waitWhilePredicate = null)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
 
@@ -831,14 +914,14 @@ namespace devolfer.Sound
 #else
             Task
 #endif
-            FadeAsync(AudioSource audioSource,
-                      float duration,
-                      float targetVolume,
-                      Ease ease = Ease.Linear,
-                      Func<bool> waitWhilePredicate = default,
-                      CancellationToken cancellationToken = default)
+            FadeTask(AudioSource audioSource,
+                     float duration,
+                     float targetVolume,
+                     Ease ease = Ease.Linear,
+                     Func<bool> waitWhilePredicate = default,
+                     CancellationToken cancellationToken = default)
         {
-            return FadeAsync(
+            return FadeTask(
                 audioSource,
                 duration,
                 targetVolume,
@@ -853,12 +936,12 @@ namespace devolfer.Sound
 #else
             Task
 #endif
-            FadeAsync(AudioSource audioSource,
-                      float duration,
-                      float targetVolume,
-                      Func<float, float> easeFunction,
-                      Func<bool> waitWhilePredicate = default,
-                      CancellationToken cancellationToken = default)
+            FadeTask(AudioSource audioSource,
+                     float duration,
+                     float targetVolume,
+                     Func<float, float> easeFunction,
+                     Func<bool> waitWhilePredicate = default,
+                     CancellationToken cancellationToken = default)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
 

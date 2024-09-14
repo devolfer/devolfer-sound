@@ -190,7 +190,7 @@ namespace devolfer.Sound
             {
                 _entitySource.volume = 0;
 
-                await SoundManager.FadeAsync(
+                await SoundManager.FadeTask(
                     _entitySource,
                     fadeInDuration,
                     properties.Volume,
@@ -362,7 +362,7 @@ namespace devolfer.Sound
 
                 Stopping = true;
 
-                await SoundManager.FadeAsync(
+                await SoundManager.FadeTask(
                     _entitySource,
                     fadeOutDuration,
                     0,
@@ -426,7 +426,7 @@ namespace devolfer.Sound
 
             Fading = true;
 
-            await SoundManager.FadeAsync(
+            await SoundManager.FadeTask(
                 _entitySource,
                 duration,
                 targetVolume,
