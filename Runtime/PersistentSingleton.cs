@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     public class PersistentSingleton<T> : Singleton<T> where T : Component
     {

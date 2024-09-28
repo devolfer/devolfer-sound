@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 using DynamicTask = System.Threading.Tasks.Task;
 #endif
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     /// <summary>
     /// Handles sound playback and volume mixing.
@@ -167,14 +167,10 @@ namespace devolfer.Sound
                                 Ease fadeInEase = Ease.Linear,
                                 Action onComplete = null)
         {
-            if (HasPlaying(audioSource, out SoundEntity playingEntity))
-            {
-                print("AHA");
-                return playingEntity;
-            }
+            if (HasPlaying(audioSource, out SoundEntity playingEntity)) return playingEntity;
+            
             if (HasPaused(audioSource, out SoundEntity pausedEntity))
             {
-                print("AHA AHA");
                 Resume(pausedEntity);
                 return pausedEntity;
             }

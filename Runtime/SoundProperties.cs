@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     /// <summary>
     /// Mimics the public sound properties found in an <see cref="AudioSource"/>.

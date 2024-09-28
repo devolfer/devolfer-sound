@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     public class Singleton<T> : MonoBehaviour where T : Component
     {

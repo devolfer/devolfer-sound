@@ -12,7 +12,7 @@ using System.Collections;
 using DynamicTask = System.Threading.Tasks.Task;
 #endif
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     /// <summary>
     /// An extended wrapper of an <see cref="AudioSource"/> that works together with the <see cref="SoundManager"/>. 

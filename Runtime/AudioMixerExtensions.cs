@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     internal static class AudioMixerExtensions
     {

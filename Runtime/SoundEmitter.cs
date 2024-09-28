@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     /// <summary>
     /// Propagates properties of an <see cref="AudioSource"/> to the <see cref="SoundManager"/> and handles playback via a <see cref="SoundEntity"/>.

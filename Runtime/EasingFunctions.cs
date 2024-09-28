@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     internal static class EasingFunctions
     {

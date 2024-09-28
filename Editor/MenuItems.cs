@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     public class MenuItems
     {

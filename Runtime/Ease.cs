@@ -1,4 +1,4 @@
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     /// <summary>
     /// Various functions for easing a volume fade.

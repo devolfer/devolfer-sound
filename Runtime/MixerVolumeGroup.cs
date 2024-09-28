@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace devolfer.Sound
+namespace Devolfer.Sound
 {
     /// <summary>
     /// Provides various functionality for handling the volume of an <see cref="AudioMixerGroup"/>.
