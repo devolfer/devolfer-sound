@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Pool;
+
 #if UNITASK_INCLUDED
 using Cysharp.Threading.Tasks;
+using DynamicTask = Cysharp.Threading.Tasks.UniTask;
 #endif
+
 #if !UNITASK_INCLUDED
 using System.Collections;
+using System.Threading.Tasks;
+using DynamicTask = System.Threading.Tasks.Task;
 #endif
 
 namespace devolfer.Sound
@@ -33,13 +37,12 @@ namespace devolfer.Sound
 
         private ObjectPool<SoundEntity> _soundEntityPool;
 
-        private HashSet<SoundEntity> _entitiesPlaying;
-        private HashSet<SoundEntity> _entitiesPaused;
-        private HashSet<SoundEntity> _entitiesStopping;
-
-        private Dictionary<AudioSource, SoundEntity> _audioSourcesPlaying;
-        private Dictionary<AudioSource, SoundEntity> _audioSourcesPaused;
-        private Dictionary<AudioSource, SoundEntity> _audioSourcesStopping;
+        private Dictionary<SoundEntity, AudioSource> _entitiesPlaying;
+        private Dictionary<AudioSource, SoundEntity> _sourcesPlaying;
+        private Dictionary<SoundEntity, AudioSource> _entitiesPaused;
+        private Dictionary<AudioSource, SoundEntity> _sourcesPaused;
+        private Dictionary<SoundEntity, AudioSource> _entitiesStopping;
+        private Dictionary<AudioSource, SoundEntity> _sourcesStopping;
 
         private Dictionary<string, MixerVolumeGroup> _mixerVolumeGroups;
         private Dictionary<string, CancellationTokenSource> _mixerFadeCancellationTokenSources;
@@ -61,12 +64,12 @@ namespace devolfer.Sound
 
         private void SetupSoundEntities()
         {
-            _entitiesPlaying = new HashSet<SoundEntity>();
-            _entitiesPaused = new HashSet<SoundEntity>();
-            _entitiesStopping = new HashSet<SoundEntity>();
-            _audioSourcesPlaying = new Dictionary<AudioSource, SoundEntity>();
-            _audioSourcesPaused = new Dictionary<AudioSource, SoundEntity>();
-            _audioSourcesStopping = new Dictionary<AudioSource, SoundEntity>();
+            _entitiesPlaying = new Dictionary<SoundEntity, AudioSource>();
+            _sourcesPlaying = new Dictionary<AudioSource, SoundEntity>();
+            _entitiesPaused = new Dictionary<SoundEntity, AudioSource>();
+            _sourcesPaused = new Dictionary<AudioSource, SoundEntity>();
+            _entitiesStopping = new Dictionary<SoundEntity, AudioSource>();
+            _sourcesStopping = new Dictionary<AudioSource, SoundEntity>();
 
             _soundEntityPool = new ObjectPool<SoundEntity>(
                 createFunc: () =>
@@ -137,9 +140,11 @@ namespace devolfer.Sound
                                 Action onComplete = null)
         {
             SoundEntity entity = _soundEntityPool.Get();
-            _entitiesPlaying.Add(entity);
 
-            return entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            entity = entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            AddPlaying(entity);
+
+            return entity;
         }
 
         /// <summary>
@@ -162,11 +167,24 @@ namespace devolfer.Sound
                                 Ease fadeInEase = Ease.Linear,
                                 Action onComplete = null)
         {
+            if (HasPlaying(audioSource, out SoundEntity playingEntity))
+            {
+                print("AHA");
+                return playingEntity;
+            }
+            if (HasPaused(audioSource, out SoundEntity pausedEntity))
+            {
+                print("AHA AHA");
+                Resume(pausedEntity);
+                return pausedEntity;
+            }
+            
             SoundEntity entity = _soundEntityPool.Get();
-            _entitiesPlaying.Add(entity);
-            _audioSourcesPlaying.TryAdd(audioSource, entity);
 
-            return entity.Play(audioSource, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            entity = entity.Play(audioSource, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            AddPlaying(entity);
+
+            return entity;
         }
 
         /// <summary>
@@ -198,25 +216,18 @@ namespace devolfer.Sound
                 onComplete);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(out SoundEntity entity,
-                      SoundProperties properties,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask PlayAsync(out SoundEntity entity,
+                                     SoundProperties properties,
+                                     Transform followTarget = null,
+                                     Vector3 position = default,
+                                     bool fadeIn = false,
+                                     float fadeInDuration = .5f,
+                                     Ease fadeInEase = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
             entity = _soundEntityPool.Get();
-            _entitiesPlaying.Add(entity);
 
-            return entity.PlayAsync(
+            DynamicTask task = entity.PlayAsync(
                 properties,
                 followTarget,
                 position,
@@ -224,28 +235,24 @@ namespace devolfer.Sound
                 fadeInDuration,
                 fadeInEase,
                 cancellationToken);
+
+            AddPlaying(entity);
+
+            return task;
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(out SoundEntity entity,
-                      AudioSource audioSource,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask PlayAsync(out SoundEntity entity,
+                                     AudioSource audioSource,
+                                     Transform followTarget = null,
+                                     Vector3 position = default,
+                                     bool fadeIn = false,
+                                     float fadeInDuration = .5f,
+                                     Ease fadeInEase = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
             entity = _soundEntityPool.Get();
-            _entitiesPlaying.Add(entity);
-            _audioSourcesPlaying.TryAdd(audioSource, entity);
 
-            return entity.PlayAsync(
+            DynamicTask task = entity.PlayAsync(
                 audioSource,
                 followTarget,
                 position,
@@ -253,27 +260,24 @@ namespace devolfer.Sound
                 fadeInDuration,
                 fadeInEase,
                 cancellationToken);
+
+            AddPlaying(entity);
+
+            return task;
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(out SoundEntity entity,
-                      AudioClip audioClip,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask PlayAsync(out SoundEntity entity,
+                                     AudioClip audioClip,
+                                     Transform followTarget = null,
+                                     Vector3 position = default,
+                                     bool fadeIn = false,
+                                     float fadeInDuration = .5f,
+                                     Ease fadeInEase = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
             entity = _soundEntityPool.Get();
-            _entitiesPlaying.Add(entity);
 
-            return entity.PlayAsync(
+            DynamicTask task = entity.PlayAsync(
                 new SoundProperties(audioClip),
                 followTarget,
                 position,
@@ -281,21 +285,19 @@ namespace devolfer.Sound
                 fadeInDuration,
                 fadeInEase,
                 cancellationToken);
+
+            AddPlaying(entity);
+
+            return task;
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(SoundProperties properties,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask PlayAsync(SoundProperties properties,
+                                     Transform followTarget = null,
+                                     Vector3 position = default,
+                                     bool fadeIn = false,
+                                     float fadeInDuration = .5f,
+                                     Ease fadeInEase = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
             return PlayAsync(
                 out _,
@@ -308,19 +310,13 @@ namespace devolfer.Sound
                 cancellationToken);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(AudioSource audioSource,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask PlayAsync(AudioSource audioSource,
+                                     Transform followTarget = null,
+                                     Vector3 position = default,
+                                     bool fadeIn = false,
+                                     float fadeInDuration = .5f,
+                                     Ease fadeInEase = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
             return PlayAsync(
                 out _,
@@ -333,19 +329,13 @@ namespace devolfer.Sound
                 cancellationToken);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(AudioClip audioClip,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask PlayAsync(AudioClip audioClip,
+                                     Transform followTarget = null,
+                                     Vector3 position = default,
+                                     bool fadeIn = false,
+                                     float fadeInDuration = .5f,
+                                     Ease fadeInEase = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
             return PlayAsync(
                 out _,
@@ -365,24 +355,26 @@ namespace devolfer.Sound
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
         public void Pause(SoundEntity entity)
         {
-            if (!_entitiesPlaying.Contains(entity)) return;
-            if (_entitiesStopping.Contains(entity)) return;
+            if (!HasPlaying(entity)) return;
+            if (HasStopping(entity)) return;
 
-            _entitiesPlaying.Remove(entity);
+            RemovePlaying(entity);
 
             entity.Pause();
 
-            _entitiesPaused.Add(entity);
+            AddPaused(entity);
         }
 
         public void Pause(AudioSource audioSource)
         {
-            if (_audioSourcesStopping.ContainsKey(audioSource)) return;
-            if (!_audioSourcesPlaying.Remove(audioSource, out SoundEntity entity)) return;
+            if (HasStopping(audioSource)) return;
+            if (!HasPlaying(audioSource, out SoundEntity entity)) return;
 
+            RemovePlaying(entity);
+            
             entity.Pause();
 
-            _audioSourcesPaused.TryAdd(audioSource, entity);
+            AddPaused(entity);
         }
 
         /// <summary>
@@ -392,24 +384,26 @@ namespace devolfer.Sound
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
         public void Resume(SoundEntity entity)
         {
-            if (!_entitiesPaused.Contains(entity)) return;
-            if (_entitiesStopping.Contains(entity)) return;
+            if (!HasPaused(entity)) return;
+            if (HasStopping(entity)) return;
 
-            _entitiesPaused.Remove(entity);
+            RemovePaused(entity);
 
             entity.Resume();
 
-            _entitiesPlaying.Add(entity);
+            AddPlaying(entity);
         }
 
         public void Resume(AudioSource audioSource)
         {
-            if (_audioSourcesStopping.ContainsKey(audioSource)) return;
-            if (!_audioSourcesPaused.Remove(audioSource, out SoundEntity entity)) return;
+            if (HasStopping(audioSource)) return;
+            if (!HasPaused(audioSource, out SoundEntity entity)) return;
+            
+            RemovePaused(entity);
 
             entity.Resume();
 
-            _audioSourcesPlaying.TryAdd(audioSource, entity);
+            AddPlaying(entity);
         }
 
         /// <summary>
@@ -427,20 +421,21 @@ namespace devolfer.Sound
                          Ease fadeOutEase = Ease.Linear,
                          Action onComplete = null)
         {
-            bool playingEntity = _entitiesPlaying.Contains(entity);
-            bool pausedEntity = _entitiesPaused.Contains(entity);
+            bool playingEntity = HasPlaying(entity);
+            bool pausedEntity = HasPaused(entity);
 
             if (!playingEntity && !pausedEntity) return;
 
-            _entitiesStopping.Add(entity);
+            AddStopping(entity);
             entity.Stop(fadeOut, fadeOutDuration, fadeOutEase, OnStopComplete);
+            
             return;
 
             void OnStopComplete()
             {
-                if (playingEntity) _entitiesPlaying.Remove(entity);
-                if (pausedEntity) _entitiesPaused.Remove(entity);
-                _entitiesStopping.Remove(entity);
+                if (playingEntity) RemovePlaying(entity);
+                if (pausedEntity) RemovePaused(entity);
+                RemoveStopping(entity);
 
                 _soundEntityPool.Release(entity);
 
@@ -454,75 +449,72 @@ namespace devolfer.Sound
                          Ease fadeOutEase = Ease.Linear,
                          Action onComplete = null)
         {
-            bool playingAudioSource = _audioSourcesPlaying.Remove(audioSource, out SoundEntity entityPlaying);
-            bool pausedAudioSource = _audioSourcesPaused.Remove(audioSource, out SoundEntity entityPaused);
+            bool playingAudioSource = HasPlaying(audioSource, out SoundEntity entityPlaying);
+            bool pausedAudioSource = HasPaused(audioSource, out SoundEntity entityPaused);
 
             if (!playingAudioSource && !pausedAudioSource) return;
 
-            SoundEntity entityToBeStopped = entityPlaying != null ? entityPlaying : entityPaused;
-            _audioSourcesStopping.TryAdd(audioSource, entityToBeStopped);
-            entityToBeStopped.Stop(fadeOut, fadeOutDuration, fadeOutEase, OnStopComplete);
+            SoundEntity entity = entityPlaying != null ? entityPlaying : entityPaused;
+            AddStopping(entity);
+            entity.Stop(fadeOut, fadeOutDuration, fadeOutEase, OnStopComplete);
+            
             return;
 
             void OnStopComplete()
             {
-                _audioSourcesStopping.Remove(audioSource);
-                _soundEntityPool.Release(entityToBeStopped);
+                if (playingAudioSource) RemovePlaying(entity);
+                if (pausedAudioSource) RemovePaused(entity);
+                RemoveStopping(entity);
+                
+                _soundEntityPool.Release(entity);
 
                 onComplete?.Invoke();
             }
         }
 
-        public async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            StopAsync(SoundEntity entity,
-                      bool fadeOut = true,
-                      float fadeOutDuration = .5f,
-                      Ease fadeOutEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public async DynamicTask StopAsync(SoundEntity entity,
+                                           bool fadeOut = true,
+                                           float fadeOutDuration = .5f,
+                                           Ease fadeOutEase = Ease.Linear,
+                                           CancellationToken cancellationToken = default)
         {
-            bool playingEntity = _entitiesPlaying.Contains(entity);
-            bool pausedEntity = _entitiesPaused.Contains(entity);
+            bool playingEntity = HasPlaying(entity);
+            bool pausedEntity = HasPaused(entity);
 
             if (!playingEntity && !pausedEntity) return;
 
-            _entitiesStopping.Add(entity);
+            AddStopping(entity);
+            
             await entity.StopAsync(fadeOut, fadeOutDuration, fadeOutEase, cancellationToken);
 
-            if (playingEntity) _entitiesPlaying.Remove(entity);
-            if (pausedEntity) _entitiesPaused.Remove(entity);
-            _entitiesStopping.Remove(entity);
+            if (playingEntity) RemovePlaying(entity);
+            if (pausedEntity) RemovePaused(entity);
+            RemoveStopping(entity);
 
             _soundEntityPool.Release(entity);
         }
 
-        public async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            StopAsync(AudioSource audioSource,
-                      bool fadeOut = true,
-                      float fadeOutDuration = .5f,
-                      Ease fadeOutEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public async DynamicTask StopAsync(AudioSource audioSource,
+                                           bool fadeOut = true,
+                                           float fadeOutDuration = .5f,
+                                           Ease fadeOutEase = Ease.Linear,
+                                           CancellationToken cancellationToken = default)
         {
-            bool playingAudioSource = _audioSourcesPlaying.Remove(audioSource, out SoundEntity entityPlaying);
-            bool pausedAudioSource = _audioSourcesPaused.Remove(audioSource, out SoundEntity entityPaused);
+            bool playingAudioSource = HasPlaying(audioSource, out SoundEntity entityPlaying);
+            bool pausedAudioSource = HasPaused(audioSource, out SoundEntity entityPaused);
 
             if (!playingAudioSource && !pausedAudioSource) return;
 
-            SoundEntity entityToBeStopped = entityPlaying != null ? entityPlaying : entityPaused;
-            _audioSourcesStopping.TryAdd(audioSource, entityToBeStopped);
-            await entityToBeStopped.StopAsync(fadeOut, fadeOutDuration, fadeOutEase, cancellationToken);
+            SoundEntity entity = entityPlaying != null ? entityPlaying : entityPaused;
+            AddStopping(entity);
+            
+            await entity.StopAsync(fadeOut, fadeOutDuration, fadeOutEase, cancellationToken);
 
-            _audioSourcesStopping.Remove(audioSource);
-            _soundEntityPool.Release(entityToBeStopped);
+            if (playingAudioSource) RemovePlaying(entity);
+            if (pausedAudioSource) RemovePaused(entity);
+            RemoveStopping(entity);
+            
+            _soundEntityPool.Release(entity);
         }
 
         /// <summary>
@@ -531,25 +523,15 @@ namespace devolfer.Sound
         /// <remarks>Has no effect on entities currently stopping.</remarks>
         public void PauseAll()
         {
-            foreach (SoundEntity entity in _entitiesPlaying)
+            foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
             {
-                if (_entitiesStopping.Contains(entity)) continue;
-
+                if (HasStopping(entity)) continue;
+                
                 entity.Pause();
-                _entitiesPaused.Add(entity);
+                AddPaused(entity);
             }
-
-            _entitiesPlaying.Clear();
-
-            foreach ((AudioSource audioSource, SoundEntity entity) in _audioSourcesPlaying)
-            {
-                if (_audioSourcesStopping.ContainsKey(audioSource)) continue;
-
-                entity.Pause();
-                _audioSourcesPaused.TryAdd(audioSource, entity);
-            }
-
-            _audioSourcesPlaying.Clear();
+            
+            ClearPlayingEntities();
         }
 
         /// <summary>
@@ -557,25 +539,15 @@ namespace devolfer.Sound
         /// </summary>
         public void ResumeAll()
         {
-            foreach (SoundEntity entity in _entitiesPaused)
+            foreach ((SoundEntity entity, AudioSource _) in _entitiesPaused)
             {
-                if (_entitiesStopping.Contains(entity)) continue;
-
+                if (HasStopping(entity)) continue;
+                
                 entity.Resume();
-                _entitiesPlaying.Add(entity);
+                AddPlaying(entity);
             }
-
-            _entitiesPaused.Clear();
-
-            foreach ((AudioSource audioSource, SoundEntity entity) in _audioSourcesPaused)
-            {
-                if (_audioSourcesStopping.ContainsKey(audioSource)) continue;
-
-                entity.Resume();
-                _audioSourcesPlaying.TryAdd(audioSource, entity);
-            }
-
-            _audioSourcesPaused.Clear();
+            
+            ClearPausedEntities();
         }
 
         /// <summary>
@@ -588,78 +560,41 @@ namespace devolfer.Sound
                             float fadeOutDuration = 1,
                             Ease fadeOutEase = Ease.Linear)
         {
-            foreach (SoundEntity entity in _entitiesPlaying) Stop(entity, fadeOut, fadeOutDuration, fadeOutEase);
-
-            foreach (SoundEntity entity in _entitiesPaused)
-            {
-                entity.Stop(false);
-                _soundEntityPool.Release(entity);
-            }
-
-            _entitiesPaused.Clear();
-
-            foreach ((AudioSource _, SoundEntity entity) in _audioSourcesPlaying)
+            foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
             {
                 Stop(entity, fadeOut, fadeOutDuration, fadeOutEase);
             }
 
-            foreach ((AudioSource _, SoundEntity entity) in _audioSourcesPaused)
+            foreach ((SoundEntity entity, AudioSource _) in _entitiesPaused)
             {
                 entity.Stop(false);
                 _soundEntityPool.Release(entity);
             }
 
-            _audioSourcesPaused.Clear();
+            ClearPausedEntities();
         }
 
-        public async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            StopAllAsync(bool fadeOut = true,
-                         float fadeOutDuration = 1,
-                         Ease fadeOutEase = Ease.Linear,
-                         CancellationToken cancellationToken = default)
+        public async DynamicTask StopAllAsync(bool fadeOut = true,
+                                              float fadeOutDuration = 1,
+                                              Ease fadeOutEase = Ease.Linear,
+                                              CancellationToken cancellationToken = default)
         {
-#if UNITASK_INCLUDED
-            List<UniTask> stopTasks = new();
-#else
-            List<Task> stopTasks = new();
-#endif
+            List<DynamicTask> stopTasks = new();
 
-            foreach (SoundEntity entity in _entitiesPlaying)
+            foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
             {
                 stopTasks.Add(StopAsync(entity, fadeOut, fadeOutDuration, fadeOutEase, cancellationToken));
             }
 
-            foreach (SoundEntity entity in _entitiesPaused)
+            foreach ((SoundEntity entity, AudioSource _) in _entitiesPaused)
             {
                 stopTasks.Add(entity.StopAsync(false, cancellationToken: cancellationToken));
                 _soundEntityPool.Release(entity);
             }
 
-            _entitiesPaused.Clear();
+            ClearPausedEntities();
 
-            foreach ((AudioSource _, SoundEntity entity) in _audioSourcesPlaying)
-            {
-                stopTasks.Add(StopAsync(entity, fadeOut, fadeOutDuration, fadeOutEase, cancellationToken));
-            }
-
-            foreach ((AudioSource _, SoundEntity entity) in _audioSourcesPaused)
-            {
-                stopTasks.Add(entity.StopAsync(false, cancellationToken: cancellationToken));
-                _soundEntityPool.Release(entity);
-            }
-
-            _entitiesPaused.Clear();
-
-#if UNITASK_INCLUDED
-            await UniTask.WhenAll(stopTasks);
-#else
-            await Task.WhenAll(stopTasks);
-#endif
+            await DynamicTask.WhenAll(stopTasks);
         }
 
         /// <summary>
@@ -697,13 +632,13 @@ namespace devolfer.Sound
         {
             if (properties == null) return;
 
-            if (_audioSourcesPaused.TryGetValue(audioSource, out SoundEntity entityPaused))
+            if (HasPaused(audioSource, out SoundEntity entityPaused))
             {
                 entityPaused.SetProperties(properties, followTarget, position);
                 return;
             }
 
-            if (_audioSourcesPlaying.TryGetValue(audioSource, out SoundEntity entityPlaying))
+            if (HasPlaying(audioSource, out SoundEntity entityPlaying))
             {
                 entityPlaying.SetProperties(properties, followTarget, position);
             }
@@ -724,10 +659,10 @@ namespace devolfer.Sound
                          Ease ease = Ease.Linear,
                          Action onComplete = null)
         {
-            if (!_entitiesPlaying.Contains(entity)) return;
-            if (_entitiesStopping.Contains(entity)) return;
+            if (!HasPlaying(entity)) return;
+            if (HasStopping(entity)) return;
 
-            if (_entitiesPaused.Contains(entity)) Resume(entity);
+            if (HasPaused(entity)) Resume(entity);
 
             entity.Fade(targetVolume, duration, ease, onComplete);
         }
@@ -738,49 +673,37 @@ namespace devolfer.Sound
                          Ease ease = Ease.Linear,
                          Action onComplete = null)
         {
-            if (!_audioSourcesPlaying.TryGetValue(audioSource, out SoundEntity entityPlaying)) return;
-            if (_audioSourcesStopping.ContainsKey(audioSource)) return;
+            if (!HasPlaying(audioSource, out SoundEntity entityPlaying)) return;
+            if (HasStopping(audioSource)) return;
 
-            if (_audioSourcesPaused.TryGetValue(audioSource, out SoundEntity entityPaused)) Resume(entityPaused);
+            if (HasPaused(audioSource, out SoundEntity entityPaused)) Resume(entityPaused);
 
             entityPlaying.Fade(targetVolume, duration, ease, onComplete);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeAsync(SoundEntity entity,
-                      float targetVolume,
-                      float duration,
-                      Ease ease = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask FadeAsync(SoundEntity entity,
+                                     float targetVolume,
+                                     float duration,
+                                     Ease ease = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
-            if (_entitiesStopping.Contains(entity)) return default;
+            if (HasStopping(entity)) return default;
 
-            if (_entitiesPaused.Contains(entity)) Resume(entity);
+            if (HasPaused(entity)) Resume(entity);
 
             return entity.FadeAsync(targetVolume, duration, ease, cancellationToken);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeAsync(AudioSource audioSource,
-                      float targetVolume,
-                      float duration,
-                      Ease ease = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        public DynamicTask FadeAsync(AudioSource audioSource,
+                                     float targetVolume,
+                                     float duration,
+                                     Ease ease = Ease.Linear,
+                                     CancellationToken cancellationToken = default)
         {
-            if (!_audioSourcesPlaying.TryGetValue(audioSource, out SoundEntity entityPlaying)) return default;
-            if (_audioSourcesStopping.ContainsKey(audioSource)) return default;
+            if (!HasPlaying(audioSource, out SoundEntity entityPlaying)) return default;
+            if (HasStopping(audioSource)) return default;
 
-            if (_audioSourcesPaused.TryGetValue(audioSource, out SoundEntity entityPaused)) Resume(entityPaused);
+            if (HasPaused(audioSource, out SoundEntity entityPaused)) Resume(entityPaused);
 
             return entityPlaying.FadeAsync(targetVolume, duration, ease, cancellationToken);
         }
@@ -820,19 +743,13 @@ namespace devolfer.Sound
             return Play(fadeInAudioSource, followTarget, fadeInPosition, true, duration, onComplete: onComplete);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            CrossFadeAsync(out SoundEntity entity,
-                           float duration,
-                           SoundEntity fadeOutEntity,
-                           SoundProperties fadeInProperties,
-                           Transform followTarget = null,
-                           Vector3 fadeInPosition = default,
-                           CancellationToken cancellationToken = default)
+        public DynamicTask CrossFadeAsync(out SoundEntity entity,
+                                          float duration,
+                                          SoundEntity fadeOutEntity,
+                                          SoundProperties fadeInProperties,
+                                          Transform followTarget = null,
+                                          Vector3 fadeInPosition = default,
+                                          CancellationToken cancellationToken = default)
         {
             _ = StopAsync(fadeOutEntity, fadeOutDuration: duration, cancellationToken: cancellationToken);
 
@@ -846,18 +763,12 @@ namespace devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            CrossFadeAsync(float duration,
-                           SoundEntity fadeOutEntity,
-                           SoundProperties fadeInProperties,
-                           Transform followTarget = null,
-                           Vector3 fadeInPosition = default,
-                           CancellationToken cancellationToken = default)
+        public DynamicTask CrossFadeAsync(float duration,
+                                          SoundEntity fadeOutEntity,
+                                          SoundProperties fadeInProperties,
+                                          Transform followTarget = null,
+                                          Vector3 fadeInPosition = default,
+                                          CancellationToken cancellationToken = default)
         {
             _ = StopAsync(fadeOutEntity, fadeOutDuration: duration, cancellationToken: cancellationToken);
 
@@ -871,19 +782,13 @@ namespace devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            CrossFadeAsync(out SoundEntity entity,
-                           float duration,
-                           AudioSource fadeOutAudioSource,
-                           AudioSource fadeInAudioSource,
-                           Transform followTarget = null,
-                           Vector3 fadeInPosition = default,
-                           CancellationToken cancellationToken = default)
+        public DynamicTask CrossFadeAsync(out SoundEntity entity,
+                                          float duration,
+                                          AudioSource fadeOutAudioSource,
+                                          AudioSource fadeInAudioSource,
+                                          Transform followTarget = null,
+                                          Vector3 fadeInPosition = default,
+                                          CancellationToken cancellationToken = default)
         {
             _ = StopAsync(fadeOutAudioSource, fadeOutDuration: duration, cancellationToken: cancellationToken);
 
@@ -897,18 +802,12 @@ namespace devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            CrossFadeAsync(float duration,
-                           AudioSource fadeOutAudioSource,
-                           AudioSource fadeInAudioSource,
-                           Transform followTarget = null,
-                           Vector3 fadeInPosition = default,
-                           CancellationToken cancellationToken = default)
+        public DynamicTask CrossFadeAsync(float duration,
+                                          AudioSource fadeOutAudioSource,
+                                          AudioSource fadeInAudioSource,
+                                          Transform followTarget = null,
+                                          Vector3 fadeInPosition = default,
+                                          CancellationToken cancellationToken = default)
         {
             _ = StopAsync(fadeOutAudioSource, fadeOutDuration: duration, cancellationToken: cancellationToken);
 
@@ -966,18 +865,12 @@ namespace devolfer.Sound
         }
 #endif
 
-        internal static
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeTask(AudioSource audioSource,
-                     float duration,
-                     float targetVolume,
-                     Ease ease = Ease.Linear,
-                     Func<bool> waitWhilePredicate = default,
-                     CancellationToken cancellationToken = default)
+        internal static DynamicTask FadeTask(AudioSource audioSource,
+                                             float duration,
+                                             float targetVolume,
+                                             Ease ease = Ease.Linear,
+                                             Func<bool> waitWhilePredicate = default,
+                                             CancellationToken cancellationToken = default)
         {
             return FadeTask(
                 audioSource,
@@ -988,18 +881,12 @@ namespace devolfer.Sound
                 cancellationToken);
         }
 
-        private static async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeTask(AudioSource audioSource,
-                     float duration,
-                     float targetVolume,
-                     Func<float, float> easeFunction,
-                     Func<bool> waitWhilePredicate = default,
-                     CancellationToken cancellationToken = default)
+        private static async DynamicTask FadeTask(AudioSource audioSource,
+                                                  float duration,
+                                                  float targetVolume,
+                                                  Func<float, float> easeFunction,
+                                                  Func<bool> waitWhilePredicate = default,
+                                                  CancellationToken cancellationToken = default)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
 
@@ -1036,6 +923,100 @@ namespace devolfer.Sound
             }
 
             audioSource.volume = targetVolume;
+        }
+        
+        private static void AddToDictionaries(SoundEntity entity,
+                                              ref Dictionary<SoundEntity, AudioSource> entityDictionary,
+                                              ref Dictionary<AudioSource, SoundEntity> sourceDictionary)
+        {
+            AudioSource source = entity.FromExternalAudioSource ? entity.ExternalAudioSource : entity.AudioSource;
+
+            entityDictionary.TryAdd(entity, source);
+            sourceDictionary.TryAdd(source, entity);
+        }
+
+        private static void RemoveFromDictionaries(SoundEntity entity,
+                                                   ref Dictionary<SoundEntity, AudioSource> entityDictionary,
+                                                   ref Dictionary<AudioSource, SoundEntity> sourceDictionary)
+        {
+            AudioSource source = entity.FromExternalAudioSource ? entity.ExternalAudioSource : entity.AudioSource;
+
+            entityDictionary.Remove(entity);
+            sourceDictionary.Remove(source);
+        }
+        
+        private void AddPlaying(SoundEntity entity)
+        {
+            AddToDictionaries(entity, ref _entitiesPlaying, ref _sourcesPlaying);
+        }
+
+        private void RemovePlaying(SoundEntity entity)
+        {
+            RemoveFromDictionaries(entity, ref _entitiesPlaying, ref _sourcesPlaying);
+        }
+
+        private void AddPaused(SoundEntity entity)
+        {
+            AddToDictionaries(entity, ref _entitiesPaused, ref _sourcesPaused);
+        }
+
+        private void RemovePaused(SoundEntity entity)
+        {
+            RemoveFromDictionaries(entity, ref _entitiesPaused, ref _sourcesPaused);
+        }
+
+        private void AddStopping(SoundEntity entity)
+        {
+            AddToDictionaries(entity, ref _entitiesStopping, ref _sourcesStopping);
+        }
+
+        private void RemoveStopping(SoundEntity entity)
+        {
+            RemoveFromDictionaries(entity, ref _entitiesStopping, ref _sourcesStopping);
+        }
+
+        private bool HasPlaying(SoundEntity entity) => _entitiesPlaying.ContainsKey(entity);
+        
+        private bool HasPlaying(AudioSource source, out SoundEntity entity)
+        {
+            return _sourcesPlaying.TryGetValue(source, out entity);
+        }
+
+        private bool HasPlaying(AudioSource source) => _sourcesPlaying.ContainsKey(source);
+
+        private bool HasPaused(SoundEntity entity) => _entitiesPaused.ContainsKey(entity);
+        
+        private bool HasPaused(AudioSource source, out SoundEntity entity)
+        {
+            return _sourcesPaused.TryGetValue(source, out entity);
+        }
+        private bool HasPaused(AudioSource source) => _sourcesPaused.ContainsKey(source);
+        
+        private bool HasStopping(SoundEntity entity) => _entitiesStopping.ContainsKey(entity);
+        
+        private bool HasStopping(AudioSource source, out SoundEntity entity)
+        {
+            return _sourcesStopping.TryGetValue(source, out entity);
+        }
+        
+        private bool HasStopping(AudioSource source) => _sourcesStopping.ContainsKey(source);
+
+        private void ClearPlayingEntities()
+        {
+            _entitiesPlaying.Clear();
+            _sourcesPlaying.Clear();
+        }
+        
+        private void ClearPausedEntities()
+        {
+            _entitiesPaused.Clear();
+            _sourcesPaused.Clear();
+        }
+        
+        private void ClearStoppingEntities()
+        {
+            _entitiesStopping.Clear();
+            _sourcesStopping.Clear();
         }
 
         #endregion
@@ -1177,17 +1158,11 @@ namespace devolfer.Sound
 #endif
         }
 
-        public async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeMixerGroupVolumeAsync(string exposedParameter,
-                                      float targetVolume,
-                                      float duration,
-                                      Ease ease = Ease.Linear,
-                                      CancellationToken cancellationToken = default)
+        public async DynamicTask FadeMixerGroupVolumeAsync(string exposedParameter,
+                                                           float targetVolume,
+                                                           float duration,
+                                                           Ease ease = Ease.Linear,
+                                                           CancellationToken cancellationToken = default)
         {
             if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
 
@@ -1219,16 +1194,10 @@ namespace devolfer.Sound
             FadeMixerGroupVolume(fadeInExposedParameter, 1, duration, onComplete: onComplete);
         }
 
-        public
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            CrossFadeMixerGroupVolumesAsync(string fadeOutExposedParameter,
-                                            string fadeInExposedParameter,
-                                            float duration,
-                                            CancellationToken cancellationToken = default)
+        public DynamicTask CrossFadeMixerGroupVolumesAsync(string fadeOutExposedParameter,
+                                                           string fadeInExposedParameter,
+                                                           float duration,
+                                                           CancellationToken cancellationToken = default)
         {
             _ = FadeMixerGroupVolumeAsync(fadeOutExposedParameter, 0, duration, cancellationToken: cancellationToken);
 
@@ -1272,17 +1241,11 @@ namespace devolfer.Sound
         }
 #endif
 
-        private static
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeMixerTask(MixerVolumeGroup mixerVolumeGroup,
-                          float duration,
-                          float targetVolume,
-                          Ease ease,
-                          CancellationToken cancellationToken = default)
+        private static DynamicTask FadeMixerTask(MixerVolumeGroup mixerVolumeGroup,
+                                                 float duration,
+                                                 float targetVolume,
+                                                 Ease ease,
+                                                 CancellationToken cancellationToken = default)
         {
             return FadeMixerTask(
                 mixerVolumeGroup,
@@ -1292,17 +1255,11 @@ namespace devolfer.Sound
                 cancellationToken);
         }
 
-        private static async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeMixerTask(MixerVolumeGroup mixerVolumeGroup,
-                          float duration,
-                          float targetVolume,
-                          Func<float, float> easeFunction,
-                          CancellationToken cancellationToken = default)
+        private static async DynamicTask FadeMixerTask(MixerVolumeGroup mixerVolumeGroup,
+                                                       float duration,
+                                                       float targetVolume,
+                                                       Func<float, float> easeFunction,
+                                                       CancellationToken cancellationToken = default)
         {
             targetVolume = Mathf.Clamp01(targetVolume);
 
@@ -1354,141 +1311,5 @@ namespace devolfer.Sound
         }
 
         #endregion
-    }
-
-    public class Singleton<T> : MonoBehaviour where T : Component
-    {
-        [Tooltip(
-            "Optionally override the gameobjects' hide flags, if you want the gameobject e.g. not to be shown in the hierarchy." +
-            "\n\nBe careful with the not saving options, as you will have to manage deleting manually yourself then!")]
-        [SerializeField] protected HideFlags _hideFlags = HideFlags.None;
-
-        protected static T s_instance;
-
-        public static T Instance
-        {
-            get
-            {
-                if (s_instance != null) return s_instance;
-
-                s_instance = FindAnyObjectByType<T>();
-
-                return s_instance != null ?
-                    s_instance :
-                    s_instance = new GameObject($"{typeof(T).Name}").AddComponent<T>();
-            }
-        }
-
-        protected virtual void Awake()
-        {
-            if (!Application.isPlaying) return;
-
-            Setup();
-        }
-
-        protected virtual void OnDestroy() => s_instance = null;
-
-        protected virtual void Setup()
-        {
-            gameObject.hideFlags = _hideFlags;
-
-            s_instance = this as T;
-        }
-    }
-
-    public class PersistentSingleton<T> : Singleton<T> where T : Component
-    {
-        protected override void Setup()
-        {
-            transform.SetParent(null);
-
-            if (s_instance != null)
-            {
-                if (s_instance != this) Destroy(gameObject);
-            }
-            else
-            {
-                base.Setup();
-
-                DontDestroyOnLoad(gameObject);
-            }
-        }
-    }
-
-    internal static class ObjectPoolExtensions
-    {
-        internal static void PreAllocate<T>(this ObjectPool<T> pool, int capacity) where T : class
-        {
-            T[] preAllocatedT = new T[capacity];
-
-            for (int i = 0; i < capacity; i++) preAllocatedT[i] = pool.Get();
-            for (int i = preAllocatedT.Length - 1; i >= 0; i--) pool.Release(preAllocatedT[i]);
-        }
-    }
-
-    internal static class AudioMixerExtensions
-    {
-        internal static bool TrySetVolume(this AudioMixer mixer, string exposedParameter, ref float value)
-        {
-            value = Mathf.Clamp01(value);
-            float decibel = value != 0 ? Mathf.Log10(value) * 20 : -80;
-
-            return mixer.SetFloat(exposedParameter, decibel);
-        }
-
-        internal static bool TryGetVolume(this AudioMixer mixer, string exposedParameter, out float value)
-        {
-            value = 0;
-
-            if (!mixer.GetFloat(exposedParameter, out float decibel)) return false;
-
-            value = decibel > -80 ? Mathf.Pow(10, decibel / 20) : 0;
-
-            return true;
-        }
-
-        internal static bool HasParameter(this AudioMixer mixer, string exposedParameter)
-        {
-            return mixer.GetFloat(exposedParameter, out float _);
-        }
-    }
-
-    internal static class TaskHelper
-    {
-        internal static async Task WaitWhile(Func<bool> waitWhilePredicate,
-                                             CancellationToken cancellationToken = default)
-        {
-            while (waitWhilePredicate())
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-
-                await Task.Yield();
-            }
-        }
-
-        internal static CancellationTokenSource Link(ref CancellationToken externalCancellationToken,
-                                                     ref CancellationTokenSource cancellationTokenSource)
-        {
-            return cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-                externalCancellationToken,
-                cancellationTokenSource.Token);
-        }
-
-        internal static CancellationToken CancelAndRefresh(ref CancellationTokenSource cancellationTokenSource)
-        {
-            Cancel(ref cancellationTokenSource);
-
-            cancellationTokenSource = new CancellationTokenSource();
-            cancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-            return cancellationTokenSource.Token;
-        }
-
-        internal static void Cancel(ref CancellationTokenSource cancellationTokenSource)
-        {
-            cancellationTokenSource?.Cancel();
-            cancellationTokenSource?.Dispose();
-            cancellationTokenSource = null;
-        }
     }
 }

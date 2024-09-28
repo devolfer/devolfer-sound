@@ -1,6 +1,6 @@
 {
-    "name": "devolfer.Sound.Runtime",
-    "rootNamespace": "devolfer.Sound",
+    "name": "Devolfer.Sound.Runtime",
+    "rootNamespace": "Devolfer.Sound",
     "references": [
         "UniTask"
     ],

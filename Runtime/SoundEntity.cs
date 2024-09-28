@@ -1,10 +1,15 @@
 using System;
 using UnityEngine;
-using System.Collections;
 using System.Threading;
-using System.Threading.Tasks;
+
 #if UNITASK_INCLUDED
 using Cysharp.Threading.Tasks;
+using DynamicTask = Cysharp.Threading.Tasks.UniTask;
+#endif
+
+#if !UNITASK_INCLUDED
+using System.Collections;
+using DynamicTask = System.Threading.Tasks.Task;
 #endif
 
 namespace devolfer.Sound
@@ -34,6 +39,11 @@ namespace devolfer.Sound
         /// Is the SoundEntity stopping?
         /// </summary>
         public bool Stopping { get; private set; }
+
+        /// <summary>
+        /// The AudioSource used for playing.
+        /// </summary>
+        public AudioSource AudioSource => _audioSource;
 
         /// <summary>
         /// Did the SoundEntity originate from an external AudioSource?
@@ -220,19 +230,13 @@ namespace devolfer.Sound
             return Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
         }
 
-        internal async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(SoundProperties properties,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        internal async DynamicTask PlayAsync(SoundProperties properties,
+                                             Transform followTarget = null,
+                                             Vector3 position = default,
+                                             bool fadeIn = false,
+                                             float fadeInDuration = .5f,
+                                             Ease fadeInEase = Ease.Linear,
+                                             CancellationToken cancellationToken = default)
         {
             if (cancellationToken == default)
             {
@@ -273,19 +277,13 @@ namespace devolfer.Sound
             Playing = false;
         }
 
-        internal
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            PlayAsync(AudioSource audioSource,
-                      Transform followTarget = null,
-                      Vector3 position = default,
-                      bool fadeIn = false,
-                      float fadeInDuration = .5f,
-                      Ease fadeInEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        internal DynamicTask PlayAsync(AudioSource audioSource,
+                                       Transform followTarget = null,
+                                       Vector3 position = default,
+                                       bool fadeIn = false,
+                                       float fadeInDuration = .5f,
+                                       Ease fadeInEase = Ease.Linear,
+                                       CancellationToken cancellationToken = default)
         {
             _externalAudioSource = audioSource;
             FromExternalAudioSource = true;
@@ -331,9 +329,9 @@ namespace devolfer.Sound
 
             if (Playing)
             {
+                Playing = false;
 #if UNITASK_INCLUDED
                 TaskHelper.Cancel(ref _playCts);
-                Playing = false;
 #else
                 if (_playRoutine != null) _manager.StopCoroutine(_playRoutine);
                 _playRoutine = null;
@@ -342,9 +340,9 @@ namespace devolfer.Sound
 
             if (Fading)
             {
+                Fading = false;
 #if UNITASK_INCLUDED
                 TaskHelper.Cancel(ref _fadeCts);
-                Fading = false;
 #else
                 if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
                 _fadeRoutine = null;
@@ -354,9 +352,9 @@ namespace devolfer.Sound
             if (!fadeOut || Paused)
             {
                 _audioSource.Stop();
-                ResetProperties();
-
                 onComplete?.Invoke();
+
+                ResetProperties();
             }
             else
             {
@@ -377,11 +375,12 @@ namespace devolfer.Sound
                         cancellationToken: cancellationToken);
 
                     _audioSource.Stop();
-                    ResetProperties();
 
                     onComplete?.Invoke();
 
                     Stopping = false;
+                    
+                    ResetProperties();
                 }
 #else
                 _stopRoutine = _manager.StartCoroutine(StopRoutine());
@@ -395,27 +394,22 @@ namespace devolfer.Sound
                     yield return SoundManager.FadeRoutine(_audioSource, fadeOutDuration, 0, fadeOutEase);
 
                     _audioSource.Stop();
-                    ResetProperties();
 
                     onComplete?.Invoke();
 
                     Stopping = false;
                     _stopRoutine = null;
+                    
+                    ResetProperties();
                 }
 #endif
             }
         }
 
-        internal async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            StopAsync(bool fadeOut = true,
-                      float fadeOutDuration = .5f,
-                      Ease fadeOutEase = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        internal async DynamicTask StopAsync(bool fadeOut = true,
+                                             float fadeOutDuration = .5f,
+                                             Ease fadeOutEase = Ease.Linear,
+                                             CancellationToken cancellationToken = default)
         {
             if (Stopping && fadeOut) return;
 
@@ -428,8 +422,8 @@ namespace devolfer.Sound
 
             if (Playing)
             {
-                TaskHelper.Cancel(ref _playCts);
                 Playing = false;
+                TaskHelper.Cancel(ref _playCts);
 #if !UNITASK_INCLUDED
                 if (_playRoutine != null) _manager.StopCoroutine(_playRoutine);
                 _playRoutine = null;
@@ -438,8 +432,8 @@ namespace devolfer.Sound
 
             if (Fading)
             {
-                TaskHelper.Cancel(ref _fadeCts);
                 Fading = false;
+                TaskHelper.Cancel(ref _fadeCts);
 #if !UNITASK_INCLUDED
                 if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
                 _fadeRoutine = null;
@@ -473,9 +467,9 @@ namespace devolfer.Sound
                     cancellationToken: cancellationToken);
 
                 _audioSource.Stop();
-                ResetProperties();
-
                 Stopping = false;
+
+                ResetProperties();
             }
         }
 
@@ -483,9 +477,9 @@ namespace devolfer.Sound
         {
             if (Fading)
             {
+                Fading = false;
 #if UNITASK_INCLUDED
                 TaskHelper.Cancel(ref _fadeCts);
-                Fading = false;
 #else
                 if (_fadeRoutine != null) _manager.StopCoroutine(_fadeRoutine);
                 _fadeRoutine = null;
@@ -508,7 +502,7 @@ namespace devolfer.Sound
                     ease,
                     PausedPredicate,
                     cancellationToken);
-                
+
                 onComplete?.Invoke();
 
                 Fading = false;
@@ -533,16 +527,10 @@ namespace devolfer.Sound
 #endif
         }
 
-        internal async
-#if UNITASK_INCLUDED
-            UniTask
-#else
-            Task
-#endif
-            FadeAsync(float targetVolume,
-                      float duration,
-                      Ease ease = Ease.Linear,
-                      CancellationToken cancellationToken = default)
+        internal async DynamicTask FadeAsync(float targetVolume,
+                                             float duration,
+                                             Ease ease = Ease.Linear,
+                                             CancellationToken cancellationToken = default)
         {
             if (cancellationToken == default)
             {

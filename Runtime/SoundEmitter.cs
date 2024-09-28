@@ -8,18 +8,7 @@ namespace devolfer.Sound
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour
     {
-        /// <summary>
-        /// Is there an entity playing right now?
-        /// </summary>
-        public bool Playing => _entity != null && _entity.Playing;
-        
-        /// <summary>
-        /// Is there an entity paused right now?
-        /// </summary>
-        public bool Paused => _entity != null && _entity.Paused;
-
         private AudioSource _source;
-        private SoundEntity _entity;
         private Transform _transform;
 
         private void Awake()
@@ -34,15 +23,7 @@ namespace devolfer.Sound
         /// </summary>
         public void Play()
         {
-            if (Playing) return;
-
-            if (Paused)
-            {
-                Resume();
-                return;
-            }
-
-            _entity = SoundManager.Instance.Play(_source, _transform, onComplete: ClearEntity);
+            SoundManager.Instance.Play(_source, _transform);
         }
 
         /// <summary>
@@ -50,7 +31,7 @@ namespace devolfer.Sound
         /// </summary>
         public void Pause()
         {
-            if (Playing) SoundManager.Instance.Pause(_source);
+            SoundManager.Instance.Pause(_source);
         }
 
         /// <summary>
@@ -58,7 +39,7 @@ namespace devolfer.Sound
         /// </summary>
         public void Resume()
         {
-            if (Paused) SoundManager.Instance.Resume(_source);
+            SoundManager.Instance.Resume(_source);
         }
 
         /// <summary>
@@ -66,11 +47,7 @@ namespace devolfer.Sound
         /// </summary>
         public void Stop()
         {
-            if (!Playing && !Paused) return;
-
             SoundManager.Instance.Stop(_source);
-
-            ClearEntity();
         }
 
         /// <summary>
@@ -79,10 +56,6 @@ namespace devolfer.Sound
         /// <param name="targetVolume">The target volume the fade will reach at the end.</param>
         public void Fade(float targetVolume)
         {
-            if (Playing) return;
-
-            if (Paused) Resume();
-
             SoundManager.Instance.Fade(_source, targetVolume, 2);
         }
 
@@ -92,14 +65,7 @@ namespace devolfer.Sound
         /// <param name="duration">The duration in seconds the fade in will prolong.</param>
         public void FadeIn(float duration)
         {
-            if (Playing || Paused) return;
-
-            _entity = SoundManager.Instance.Play(
-                _source,
-                _transform,
-                fadeIn: true,
-                fadeInDuration: duration,
-                onComplete: ClearEntity);
+            SoundManager.Instance.Play(_source, _transform, fadeIn: true, fadeInDuration: duration);
         }
 
         /// <summary>
@@ -108,13 +74,7 @@ namespace devolfer.Sound
         /// <param name="duration">The duration in seconds the fade out will prolong.</param>
         public void FadeOut(float duration)
         {
-            if (!Playing && !Paused) return;
-
             SoundManager.Instance.Stop(_source, fadeOutDuration: duration);
-
-            ClearEntity();
         }
-
-        private void ClearEntity() => _entity = null;
     }
 }
