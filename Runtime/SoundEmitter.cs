@@ -19,7 +19,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Plays attached AudioSource via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
+        /// Plays attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
         /// </summary>
         public void Play()
         {
@@ -27,7 +27,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Pauses attached AudioSource via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
+        /// Pauses attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
         /// </summary>
         public void Pause()
         {
@@ -35,7 +35,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Resumes attached AudioSource via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
+        /// Resumes attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
         /// </summary>
         public void Resume()
         {
@@ -43,7 +43,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Stops attached AudioSource via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
+        /// Stops attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
         /// </summary>
         public void Stop()
         {
@@ -51,7 +51,17 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Fades attached AudioSource via the <see cref="SoundManager"/> for 2 seconds as a <see cref="SoundEntity"/>.
+        /// Fades attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
+        /// </summary>
+        /// <param name="targetVolume">The target volume the fade will reach at the end.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        public void Fade(float targetVolume, float duration)
+        {
+            SoundManager.Instance.Fade(_source, targetVolume, duration);
+        }
+
+        /// <summary>
+        /// Fades attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> for 2 seconds as a <see cref="SoundEntity"/>.
         /// </summary>
         /// <param name="targetVolume">The target volume the fade will reach at the end.</param>
         public void Fade(float targetVolume)

@@ -121,7 +121,7 @@ namespace Devolfer.Sound
         #region Entity
 
         /// <summary>
-        /// Plays a sound with the specified sound properties.
+        /// Plays a sound with the specified <see cref="SoundProperties"/>.
         /// </summary>
         /// <param name="properties">The properties that define the sound.</param>
         /// <param name="followTarget">Optional target the sound will follow while playing.</param>
@@ -184,7 +184,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Plays a sound with the given <see cref="AudioClip"/>.
+        /// Plays a sound with the specified <see cref="AudioClip"/>.
         /// </summary>
         /// <param name="audioClip">The clip to be played.</param>
         /// <param name="followTarget">Optional target the sound will follow while playing.</param>
@@ -212,6 +212,18 @@ namespace Devolfer.Sound
                 onComplete);
         }
 
+        /// <summary>
+        /// Asynchronously plays a sound with the specified <see cref="SoundProperties"/>.
+        /// </summary>
+        /// <param name="entity">The <see cref="SoundEntity"/> used for playback.</param>
+        /// <param name="properties">The properties that define the sound.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the playback.</param>
+        /// <returns>The playback task.</returns>
         public DynamicTask PlayAsync(out SoundEntity entity,
                                      SoundProperties properties,
                                      Transform followTarget = null,
@@ -237,6 +249,18 @@ namespace Devolfer.Sound
             return task;
         }
 
+        /// <summary>
+        /// Asynchronously plays a sound with the properties of an <see cref="AudioSource"/>.
+        /// </summary>
+        /// <param name="entity">The <see cref="SoundEntity"/> used for playback.</param>
+        /// <param name="audioSource">The source of which the sound properties will be derived from.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the playback.</param>
+        /// <returns>The playback task.</returns>
         public DynamicTask PlayAsync(out SoundEntity entity,
                                      AudioSource audioSource,
                                      Transform followTarget = null,
@@ -262,6 +286,18 @@ namespace Devolfer.Sound
             return task;
         }
 
+        /// <summary>
+        /// Asynchronously plays a sound with the specified <see cref="AudioClip"/>.
+        /// </summary>
+        /// <param name="entity">The <see cref="SoundEntity"/> used for playback.</param>
+        /// <param name="audioClip">The clip to be played.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the playback.</param>
+        /// <returns>The playback task.</returns>
         public DynamicTask PlayAsync(out SoundEntity entity,
                                      AudioClip audioClip,
                                      Transform followTarget = null,
@@ -287,6 +323,17 @@ namespace Devolfer.Sound
             return task;
         }
 
+        /// <summary>
+        /// Asynchronously plays a sound with the specified <see cref="SoundProperties"/>.
+        /// </summary>
+        /// <param name="properties">The properties that define the sound.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the playback.</param>
+        /// <returns>The playback task.</returns>
         public DynamicTask PlayAsync(SoundProperties properties,
                                      Transform followTarget = null,
                                      Vector3 position = default,
@@ -306,6 +353,17 @@ namespace Devolfer.Sound
                 cancellationToken);
         }
 
+        /// <summary>
+        /// Asynchronously plays a sound with the properties of an <see cref="AudioSource"/>.
+        /// </summary>
+        /// <param name="audioSource">The source of which the sound properties will be derived from.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the playback.</param>
+        /// <returns>The playback task.</returns>
         public DynamicTask PlayAsync(AudioSource audioSource,
                                      Transform followTarget = null,
                                      Vector3 position = default,
@@ -325,6 +383,17 @@ namespace Devolfer.Sound
                 cancellationToken);
         }
 
+        /// <summary>
+        /// Asynchronously plays a sound with the specified <see cref="AudioClip"/>.
+        /// </summary>
+        /// <param name="audioClip">The clip to be played.</param>
+        /// <param name="followTarget">Optional target the sound will follow while playing.</param>
+        /// <param name="position">Either the global position or, when following, the position offset at which the sound is played.</param>
+        /// <param name="fadeIn">Optional volume fade in at the start of play.</param>
+        /// <param name="fadeInDuration">The duration in seconds the fading in will prolong.</param>
+        /// <param name="fadeInEase">The easing applied when fading in.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the playback.</param>
+        /// <returns>The playback task.</returns>
         public DynamicTask PlayAsync(AudioClip audioClip,
                                      Transform followTarget = null,
                                      Vector3 position = default,
@@ -345,7 +414,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Pauses a playing sound.
+        /// Pauses a playing sound handled by the Sound Manager.
         /// </summary>
         /// <param name="entity">The sound entity that is currently playing.</param>
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
@@ -361,6 +430,11 @@ namespace Devolfer.Sound
             AddPaused(entity);
         }
 
+        /// <summary>
+        /// Pauses a playing sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="audioSource">The source of the sound.</param>
+        /// <remarks>Has no effect if the source is currently stopping.</remarks>
         public void Pause(AudioSource audioSource)
         {
             if (HasStopping(audioSource)) return;
@@ -374,7 +448,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Resumes a paused sound.
+        /// Resumes a paused sound handled by the Sound Manager.
         /// </summary>
         /// <param name="entity">The sound entity that is currently paused.</param>
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
@@ -390,6 +464,11 @@ namespace Devolfer.Sound
             AddPlaying(entity);
         }
 
+        /// <summary>
+        /// Resumes a paused sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="audioSource">The source of the sound.</param>
+        /// <remarks>Has no effect if the source is currently stopping.</remarks>
         public void Resume(AudioSource audioSource)
         {
             if (HasStopping(audioSource)) return;
@@ -403,14 +482,14 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Stops playback of a playing/paused sound.
+        /// Stops playback of a playing/paused sound handled by the Sound Manager.
         /// </summary>
         /// <param name="entity">The sound entity that is either currently playing or paused.</param>
         /// <param name="fadeOut">True by default. Set this to false, if the volume should not fade out when stopping.</param>
         /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
         /// <param name="fadeOutEase">The easing applied when fading out.</param>
         /// <param name="onComplete">Optional callback once sound completes stopping.</param>
-        /// <remarks>Paused entities will be stopped without fade out regardless.</remarks>
+        /// <remarks>Paused sounds will be stopped without fade out regardless.</remarks>
         public void Stop(SoundEntity entity,
                          bool fadeOut = true,
                          float fadeOutDuration = .5f,
@@ -439,6 +518,15 @@ namespace Devolfer.Sound
             }
         }
 
+        /// <summary>
+        /// Stops playback of a playing/paused sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="audioSource">The source that is either currently playing or paused.</param>
+        /// <param name="fadeOut">True by default. Set this to false, if the volume should not fade out when stopping.</param>
+        /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
+        /// <param name="fadeOutEase">The easing applied when fading out.</param>
+        /// <param name="onComplete">Optional callback once sound completes stopping.</param>
+        /// <remarks>Paused sounds will be stopped without fade out regardless.</remarks>
         public void Stop(AudioSource audioSource,
                          bool fadeOut = true,
                          float fadeOutDuration = .5f,
@@ -468,6 +556,16 @@ namespace Devolfer.Sound
             }
         }
 
+        /// <summary>
+        /// Asynchronously stops playback of a playing/paused sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="entity">The sound entity that is either currently playing or paused.</param>
+        /// <param name="fadeOut">True by default. Set this to false, if the volume should not fade out when stopping.</param>
+        /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
+        /// <param name="fadeOutEase">The easing applied when fading out.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the stopping.</param>
+        /// <returns>The stopping task.</returns>
+        /// <remarks>Paused sounds will be stopped without fade out regardless.</remarks>
         public async DynamicTask StopAsync(SoundEntity entity,
                                            bool fadeOut = true,
                                            float fadeOutDuration = .5f,
@@ -490,6 +588,16 @@ namespace Devolfer.Sound
             _soundEntityPool.Release(entity);
         }
 
+        /// <summary>
+        /// Asynchronously stops playback of a playing/paused sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="audioSource">The source that is either currently playing or paused.</param>
+        /// <param name="fadeOut">True by default. Set this to false, if the volume should not fade out when stopping.</param>
+        /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
+        /// <param name="fadeOutEase">The easing applied when fading out.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the stopping.</param>
+        /// <returns>The stopping task.</returns>
+        /// <remarks>Paused sounds will be stopped without fade out regardless.</remarks>
         public async DynamicTask StopAsync(AudioSource audioSource,
                                            bool fadeOut = true,
                                            float fadeOutDuration = .5f,
@@ -516,7 +624,7 @@ namespace Devolfer.Sound
         /// <summary>
         /// Pauses all currently playing sounds handled by the Sound Manager.
         /// </summary>
-        /// <remarks>Has no effect on entities currently stopping.</remarks>
+        /// <remarks>Has no effect on sounds currently stopping.</remarks>
         public void PauseAll()
         {
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
@@ -547,7 +655,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Stops all currently playing and paused sounds handled by the Sound Manager.
+        /// Stops all currently playing/paused sounds handled by the Sound Manager.
         /// </summary>
         /// <param name="fadeOut">True by default. Set this to false, if the volumes should not fade out when stopping.</param>
         /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
@@ -570,6 +678,14 @@ namespace Devolfer.Sound
             ClearPausedEntities();
         }
 
+        /// <summary>
+        /// Asynchronously stops all currently playing/paused sounds handled by the Sound Manager.
+        /// </summary>
+        /// <param name="fadeOut">True by default. Set this to false, if the volumes should not fade out when stopping.</param>
+        /// <param name="fadeOutDuration">The duration in seconds the fading out will prolong.</param>
+        /// <param name="fadeOutEase">The easing applied when fading out.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the stopping.</param>
+        /// <returns>The stopping task.</returns>
         public async DynamicTask StopAllAsync(bool fadeOut = true,
                                               float fadeOutDuration = 1,
                                               Ease fadeOutEase = Ease.Linear,
@@ -594,7 +710,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Sets the properties of a playing or paused sound.
+        /// Sets the properties of a playing/paused sound.
         /// </summary>
         /// <param name="entity">The entity whose properties will be changed.</param>
         /// <param name="properties">The new properties.</param>
@@ -613,7 +729,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Sets the properties of a playing or paused AudioSource that is handled by this SoundManager.
+        /// Sets the properties of a playing/paused AudioSource that is handled by the Sound Manager.
         /// </summary>
         /// <param name="audioSource">The source used to initiate playback via the manager.</param>
         /// <param name="properties">The new properties.</param>
@@ -641,14 +757,14 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Fades the volume of a playing sound.
+        /// Fades the volume of a playing sound handled by the Sound Manager.
         /// </summary>
         /// <param name="entity">The sound entity that is currently playing or paused.</param>
         /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
         /// <param name="duration">The duration in seconds the fade will prolong.</param>
         /// <param name="ease">The easing applied when fading.</param>
         /// <param name="onComplete">Optional callback once sound completes fading.</param>
-        /// <remarks>Has no effect on entities currently stopping.</remarks>
+        /// <remarks>Has no effect on sounds currently stopping.</remarks>
         public void Fade(SoundEntity entity,
                          float targetVolume,
                          float duration,
@@ -663,6 +779,15 @@ namespace Devolfer.Sound
             entity.Fade(targetVolume, duration, ease, onComplete);
         }
 
+        /// <summary>
+        /// Fades the volume of a playing sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="audioSource">The source that is currently playing or paused.</param>
+        /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        /// <param name="ease">The easing applied when fading.</param>
+        /// <param name="onComplete">Optional callback once sound completes fading.</param>
+        /// <remarks>Has no effect on sounds currently stopping.</remarks>
         public void Fade(AudioSource audioSource,
                          float targetVolume,
                          float duration,
@@ -677,6 +802,16 @@ namespace Devolfer.Sound
             entityPlaying.Fade(targetVolume, duration, ease, onComplete);
         }
 
+        /// <summary>
+        /// Asynchronously fades the volume of a playing sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="entity">The sound entity that is currently playing or paused.</param>
+        /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        /// <param name="ease">The easing applied when fading.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the fading.</param>
+        /// <returns>The fading task.</returns>
+        /// <remarks>Has no effect on sounds currently stopping.</remarks>
         public DynamicTask FadeAsync(SoundEntity entity,
                                      float targetVolume,
                                      float duration,
@@ -690,6 +825,16 @@ namespace Devolfer.Sound
             return entity.FadeAsync(targetVolume, duration, ease, cancellationToken);
         }
 
+        /// <summary>
+        /// Asynchronously fades the volume of a playing sound handled by the Sound Manager.
+        /// </summary>
+        /// <param name="audioSource">The source that is currently playing or paused.</param>
+        /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        /// <param name="ease">The easing applied when fading.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the fading.</param>
+        /// <returns>The fading task.</returns>
+        /// <remarks>Has no effect on sounds currently stopping.</remarks>
         public DynamicTask FadeAsync(AudioSource audioSource,
                                      float targetVolume,
                                      float duration,
@@ -705,7 +850,7 @@ namespace Devolfer.Sound
         }
 
         /// <summary>
-        /// Linearly cross-fades a playing sound entity and a new sound. The fading out sound entity will be stopped at the end.
+        /// Linearly cross-fades a playing sound handled by the Sound Manager and a new sound. The fading out sound will be stopped at the end.
         /// </summary>
         /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
         /// <param name="fadeOutEntity">The sound entity that will fade out and stop.</param>
@@ -727,6 +872,17 @@ namespace Devolfer.Sound
             return Play(fadeInProperties, followTarget, fadeInPosition, true, duration, onComplete: onComplete);
         }
 
+        /// <summary>
+        /// Linearly cross-fades a playing sound handled by the Sound Manager and a new sound. The fading out sound will be stopped at the end.
+        /// </summary>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="fadeOutAudioSource">The source that will fade out and stop.</param>
+        /// <param name="fadeInAudioSource">The source that defines the newly played sound.</param>
+        /// <param name="followTarget">Optional target the new sound will follow while playing.</param>
+        /// <param name="fadeInPosition">Either the global position or, when following, the position offset at which the new sound is played.</param>
+        /// <param name="onComplete">Optional callback once sounds complete cross-fading.</param>
+        /// <returns>The new <see cref="SoundEntity"/> fading in.</returns>
+        /// <remarks>Simultaneously call Stop and Play methods for finer cross-fading control instead.</remarks>
         public SoundEntity CrossFade(float duration,
                                      AudioSource fadeOutAudioSource,
                                      AudioSource fadeInAudioSource,
@@ -739,6 +895,18 @@ namespace Devolfer.Sound
             return Play(fadeInAudioSource, followTarget, fadeInPosition, true, duration, onComplete: onComplete);
         }
 
+        /// <summary>
+        /// Asynchronously and linearly cross-fades a playing sound handled by the Sound Manager and a new sound. The fading out sound will be stopped at the end.
+        /// </summary>
+        /// <param name="entity">The <see cref="SoundEntity"/> used for playback of the new sound.</param>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="fadeOutEntity">The sound entity that will fade out and stop.</param>
+        /// <param name="fadeInProperties">The properties that define the newly played sound.</param>
+        /// <param name="followTarget">Optional target the new sound will follow while playing.</param>
+        /// <param name="fadeInPosition">Either the global position or, when following, the position offset at which the new sound is played.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the cross-fading.</param>
+        /// <returns>The cross-fading task.</returns>
+        /// <remarks>Simultaneously call Stop and Play methods for finer cross-fading control instead.</remarks>
         public DynamicTask CrossFadeAsync(out SoundEntity entity,
                                           float duration,
                                           SoundEntity fadeOutEntity,
@@ -759,6 +927,17 @@ namespace Devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// Asynchronously and linearly cross-fades a playing sound handled by the Sound Manager and a new sound. The fading out sound will be stopped at the end.
+        /// </summary>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="fadeOutEntity">The sound entity that will fade out and stop.</param>
+        /// <param name="fadeInProperties">The properties that define the newly played sound.</param>
+        /// <param name="followTarget">Optional target the new sound will follow while playing.</param>
+        /// <param name="fadeInPosition">Either the global position or, when following, the position offset at which the new sound is played.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the cross-fading.</param>
+        /// <returns>The cross-fading task.</returns>
+        /// <remarks>Simultaneously call Stop and Play methods for finer cross-fading control instead.</remarks>
         public DynamicTask CrossFadeAsync(float duration,
                                           SoundEntity fadeOutEntity,
                                           SoundProperties fadeInProperties,
@@ -778,6 +957,18 @@ namespace Devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// Asynchronously and linearly cross-fades a playing sound handled by the Sound Manager and a new sound. The fading out sound will be stopped at the end.
+        /// </summary>
+        /// <param name="entity">The <see cref="SoundEntity"/> used for playback of the new sound.</param>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="fadeOutAudioSource">The source that will fade out and stop.</param>
+        /// <param name="fadeInAudioSource">The source that defines the newly played sound.</param>
+        /// <param name="followTarget">Optional target the new sound will follow while playing.</param>
+        /// <param name="fadeInPosition">Either the global position or, when following, the position offset at which the new sound is played.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the cross-fading.</param>
+        /// <returns>The cross-fading task.</returns>
+        /// <remarks>Simultaneously call Stop and Play methods for finer cross-fading control instead.</remarks>
         public DynamicTask CrossFadeAsync(out SoundEntity entity,
                                           float duration,
                                           AudioSource fadeOutAudioSource,
@@ -798,6 +989,17 @@ namespace Devolfer.Sound
                 cancellationToken: cancellationToken);
         }
 
+        /// <summary>
+        /// Asynchronously and linearly cross-fades a playing sound handled by the Sound Manager and a new sound. The fading out sound will be stopped at the end.
+        /// </summary>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="fadeOutAudioSource">The source that will fade out and stop.</param>
+        /// <param name="fadeInAudioSource">The source that defines the newly played sound.</param>
+        /// <param name="followTarget">Optional target the new sound will follow while playing.</param>
+        /// <param name="fadeInPosition">Either the global position or, when following, the position offset at which the new sound is played.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the cross-fading.</param>
+        /// <returns>The cross-fading task.</returns>
+        /// <remarks>Simultaneously call Stop and Play methods for finer cross-fading control instead.</remarks>
         public DynamicTask CrossFadeAsync(float duration,
                                           AudioSource fadeOutAudioSource,
                                           AudioSource fadeInAudioSource,
@@ -1154,6 +1356,14 @@ namespace Devolfer.Sound
 #endif
         }
 
+        /// <summary>
+        /// Asynchronously fades the volume of an Audio Mixer Group.
+        /// </summary>
+        /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <param name="targetVolume">The target volume reached at the end of the fade.</param>
+        /// <param name="duration">The duration in seconds the fade will prolong.</param>
+        /// <param name="ease">The easing applied when fading.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the fading.</param>
         public async DynamicTask FadeMixerGroupVolumeAsync(string exposedParameter,
                                                            float targetVolume,
                                                            float duration,
@@ -1190,6 +1400,13 @@ namespace Devolfer.Sound
             FadeMixerGroupVolume(fadeInExposedParameter, 1, duration, onComplete: onComplete);
         }
 
+        /// <summary>
+        /// Asynchronously and linearly cross-fades the volume of two Audio Mixer Groups.
+        /// </summary>
+        /// <param name="fadeOutExposedParameter">The exposed parameter with which to access the group fading out, e.g. 'VolumeSFX'.</param>
+        /// <param name="fadeInExposedParameter">The exposed parameter with which to access the group fading in, e.g. 'VolumeMusic'.</param>
+        /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
+        /// <param name="cancellationToken">Optional token for cancelling the fading.</param>
         public DynamicTask CrossFadeMixerGroupVolumesAsync(string fadeOutExposedParameter,
                                                            string fadeInExposedParameter,
                                                            float duration,
