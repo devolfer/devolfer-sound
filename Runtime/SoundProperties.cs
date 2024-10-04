@@ -115,13 +115,13 @@ namespace Devolfer.Sound
             BypassEffects = false;
             BypassListenerEffects = false;
             BypassReverbZones = false;
-            PlayOnAwake = true;
+            PlayOnAwake = false;
             Loop = false;
             Priority = 128;
             Volume = 1;
             Pitch = 1;
             PanStereo = 0;
-            SpatialBlend = 0;
+            SpatialBlend = 1;
             ReverbZoneMix = 1;
             DopplerLevel = 1;
             Spread = 0;
