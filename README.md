@@ -20,14 +20,16 @@ This package provides a lean & simple-to-use Sound Manager for your Unity projec
     * [Pause/Resume](#pauseresume)
     * [Stop](#stop)
     * [Fade](#fade)
-    * [Sound Emitter Component](#sound-emitter-component)
   * [Audio Mixers](#audio-mixers)
+  * [Sound Emitter Component](#sound-emitter-component)
 * [License](#license)
 * [Final Words](#final-words)
 
 ## Getting started
 ### Installation
-Install through the Editor as a git package by entering`https://github.com/devolfer/devolfer-sound.git` in the Package Manager (recommended).
+Please install through the Editor as a git package by entering`https://github.com/devolfer/devolfer-sound.git` in the Package Manager (recommended).
+
+Alternatively add `"com.devolfer.sound": "https://github.com/devolfer/devolfer-sound.git"` to `Packages/manifest.json`.
 
 Downloading & manually importing the content into a folder inside your project is of course also possible.
 
@@ -43,7 +45,7 @@ While this means there is no extra project setup required, it could potentially 
 Should you have used any of the async methods of this package already, and expected a C# Task to be returned, be prepared to change them to type `UniTask`.  
 
 Even if you don't intend to work with the async/await flow, I highly recommend installing UniTask anyway.   
-Many synchronous methods that rely on any kind of duration, will then play as *allocation-free* tasks under the hood!
+Many synchronous methods that rely on any kind of duration, will then play as **allocation-free** tasks under the hood!
 
 ## Usage
 This package is primarily intended to be used via scripting.   
@@ -56,7 +58,7 @@ Nonetheless, I will try to give as clear explanations as possible in the followi
 ### Sounds
 #### Play
 <details open>
-<summary>Click to expand/shrink</summary>
+<summary><i>Click to expand/shrink</i></summary><br>
 
 Playing can be initiated in various ways. Let's look at how an `AudioClip` could be played once.
 
@@ -132,7 +134,7 @@ SoundManager.Instance.Play(new SoundProperties(audioClip) { Volume = volume, Pit
 
 Instantiating new `SoundProperties` like above are just for demonstration - when possible they should be cached & reused!
 
-Due to the nature of `AudioSource` properties being mimicked by the `SoundProperties`, it is also no problem to directly pass the former.
+Due to the nature of `AudioSource` properties being mimicked by the `SoundProperties`, it is also no problem to pass it directly.
 
 ```csharp
 // This time, inject an AudioSource via the Editor Inspector ...
@@ -142,7 +144,7 @@ Due to the nature of `AudioSource` properties being mimicked by the `SoundProper
 SoundManager.Instance.Play(audioSource);
 ```
 
-Implicit casting from `AudioSource` to `SoundProperties` is supported.   
+Implicit casting from `AudioSource` to `SoundProperties` is supported!   
 Using the `SoundProperties` copy constructor like below e.g. allows to selectively change `AudioSource` properties, when passing to the Play method.
 
 ```csharp
@@ -190,72 +192,164 @@ private async void YourAsyncMethod()
 
 #### Pause/Resume
 <details open>
-<summary>Click to expand/shrink</summary>
+<summary><i>Click to expand/shrink</i></summary><br>
 
 Pausing requires to either have a reference to a playing `SoundEntity` or the `AudioSource` the Play method was called with.   
 Synchronous Play methods return a `SoundEntity`, asynchronous optionally out them. Let's see it all in examples:
 
 ```csharp
 // Play with clip & cache returned SoundEntity into a variable
-SoundEntity soundEntity = SoundManager.Instance.Play((audioClip));
+SoundEntity soundEntity = SoundManager.Instance.Play(audioClip);
 
 // Play async with clip & out the SoundEntity into a new variable
-// PlayAsync returns a Task without arguments!
+// PlayAsync returns a Task without any return values!
 await SoundManager.Instance.PlayAsync(out SoundEntity soundEntity, audioClip);
 
 // Play with AudioSource directly, no need to cache return value
-SoundManager.Instance.Play((audioSource));
+SoundManager.Instance.Play(audioSource);
 
 // Similar to above
 await SoundManager.Instance.PlayAsync(audioSource);
 ```
 
-With the above in place it is easy to Pause/Resume:
+With the above in place it is easy to pause and resume:
 
 ```csharp
 // Pause & Resume cached/outed SoundEntity
-SoundManager.Instance.Pause((soundEntity));
-SoundManager.Instance.Resume((soundEntity));
+SoundManager.Instance.Pause(soundEntity);
+SoundManager.Instance.Resume(soundEntity);
 
 // Pause & Resume via original AudioSource
-SoundManager.Instance.Pause((audioSource));
-SoundManager.Instance.Resume((audioSource));
+SoundManager.Instance.Pause(audioSource);
+SoundManager.Instance.Resume(audioSource);
 ```
 
 There might be some confusion involved in how the examples with `AudioSource` can even work. A brief explanation:   
-
-Any sound played through the `SoundManager` is stored in internal dictionaries of type `Dictionary<AudioSource, SoundEntity>` (bidirectionally).   
+Any sound handled by the `SoundManager` is stored in internal dictionaries of type `Dictionary<AudioSource, SoundEntity>` (bidirectionally).   
 When passing an `AudioSource` to the Play method, it is therefore stored as the key to the playing `SoundEntity`.   
 In a nutshell, the `SoundManager` does a simple lookup and uses the retrieved `SoundEntity`!
 
+Pausing/Resuming all sounds as a consequence is straightforward.
+
+```csharp
+// Pauses & Resumes all sounds
+SoundManager.Instance.PauseAll();
+SoundManager.Instance.ResumeAll();
+```
+
+Two things to consider is that this only works on sounds handled by the `SoundManager` and on those that are not in the middle of stopping!
 
 </details>
 
 #### Stop
 <details open>
-<summary>Click to expand/shrink</summary>
+<summary><i>Click to expand/shrink</i></summary><br>
 
+Stopping also requires a `SoundEntity` or `AudioSource`. Let's assume we have access to both:
 
+```csharp
+// Stop both cached 'soundEntity' & referenced original 'audioSource'
+SoundManager.Instance.Stop(soundEntity);
+SoundManager.Instance.Stop(audioSource);
+
+// Same as above as async call
+await SoundManager.Instance.StopAsync(soundEntity);
+await SoundManager.Instance.StopAsync(audioSource);
+```
+
+By default, the `Stop` and `StopAsync` methods fade out the sound when stopping! This can be individually set.
+
+```csharp
+// Stop cached 'soundEntity' with long fadeOut duration
+SoundManager.Instance.Stop(
+    soundEntity, 
+    fadeOutDuration: 3f, 
+    fadeOutEase: Ease.OutSine, 
+    onComplete: () => Debug.Log("Stopped sound after very long fade out."));
+
+// Stop cached 'soundEntity' without a fade out
+SoundManager.Instance.Stop(soundEntity, fadeOut: false);
+
+// Stop referenced original 'audioSource' asynchronously with default fade out (0.5 seconds & linear ease)
+// Passing 'someCancellationToken' is again optional
+await SoundManager.Instance.StopAsync(audioSource, cancellationToken: someCancellationToken);
+```
+
+For stopping all sounds there are both synchronous and asynchronous ways to do this. Both fade out by default again.
+
+```csharp
+// Stop all sounds with default fade out
+SoundManager.Instance.StopAll();
+
+// Stop all sounds without a fade out
+SoundManager.Instance.StopAll(fadeOut: false);
+
+// Stop all sounds asynchronously with InOutSine easing applied
+await SoundManager.Instance.StopAllAsync(fadeOutEase: Ease.InOutSine);
+```
 
 </details>
 
 #### Fade
 <details open>
-<summary>Click to expand/shrink</summary>
+<summary><i>Click to expand/shrink</i></summary><br>
 
+Fading only works on currently played or paused sounds. It is mandatory to set a `targetVolume` and `duration` when doing so.   
+If a sound is paused, it will resume it before fading!
 
+```csharp
+// Fade cached 'soundEntity' to volume 0.2 over 1 second
+SoundManager.Instance.Fade(soundEntity, .2f, 1f);
 
-</details>
+// Pause cached 'soundEntity' & then fade it in to volume 1 with InExpo easing over 0.5 seconds
+SoundManager.Instance.Pause(soundEntity);
+SoundManager.Instance.Fade(
+    soundEntity, 
+    1f, 
+    .5f, 
+    ease: Ease.InExpo, 
+    onComplete: () => Debug.Log("Quickly faded in paused sound again!"));
 
-#### Sound Emitter Component
-<details open>
-<summary>Click to expand/shrink</summary>
+// Fade referenced original 'audioSource' to volume 0.5 with default ease (linear) over 2 seconds
+// Again, cancellation token is optional!
+await SoundManager.Instance.FadeAsync(audioSource, .5f, 2f, cancellationToken: someCancellationToken)
+```
 
+For linear cross-fading there is also a method, but it might work a little different to what's expected. It will stop an existing sound, while initiating a new one with a fade in.   
+Setting a duration and the two sounds is mandatory.
 
+```csharp
+// Cross-fade cached 'soundEntity' & a new clip over 1 second
+// This will fade out & stop 'soundEntity' and play & fade in the new clip with default properties
+SoundManager.Instance.CrossFade(1f, soundEntity, new SoundProperties(audioClip));
+
+// Same as above, but this time with a followTarget for the new entity & caching the new entity
+SoundEntity newSoundEntity = SoundManager.Instance.CrossFade(
+    1f, soundEntity, new SoundProperties(audioClip), followTarget: transformToFollow);
+
+// Cross-fade two different audio sources
+SoundManager.Instance.CrossFade(1f, audioSource, differentAudioSource);
+
+// Cross-fade asynchronously two sound entities & out the new one
+await SoundManager.Instance.CrossFadeAsync(
+    out SoundEntity anotherNewSoundEntity, 1f, newSoundEntity, new SoundProperties(audioClip));
+
+// Cross-fade asynchronously two audio sources with optional cancellation token
+await SoundManager.Instance.CrossFadeAsync(
+    1f, differentAudioSource, anotherDifferentAudioSource, cancellationToken: someCancellationToken);
+```
+
+Again, stopping & playing for cross-fading might not be the desired approach.   
+If so, please simultaneously invoke two `Fade` calls. Or perhaps refer to controlling volume through [Audio Mixers](#audio-mixers) instead.
 
 </details>
 
 ### Audio Mixers
+
+
+
+### Sound Emitter Component
+
 
 ## License
 
