@@ -62,7 +62,7 @@ namespace Devolfer.Sound
         /// <param name="audioMixer">The associated Audio Mixer of the group.</param>
         /// <param name="exposedParameter">The name that exposes the Audio Mixer Groups' volume and allows manipulating it.</param>
         /// <param name="volumeSegments">Splits the volume range into the specified amount of segments and allows setting volume in steps.</param>
-        public MixerVolumeGroup(AudioMixer audioMixer, string exposedParameter, int volumeSegments)
+        public MixerVolumeGroup(AudioMixer audioMixer, string exposedParameter, int volumeSegments = 1)
         {
             _audioMixer = audioMixer;
             _exposedParameter = exposedParameter;
