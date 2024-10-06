@@ -35,6 +35,9 @@ This package provides a lean Sound Manager for your Unity project.
 Please install through the Editor as a git package by entering`https://github.com/devolfer/devolfer-sound.git` in the Package Manager (recommended).
 It can be opened under `Window -> Package Manager`.
 
+<img width="640" alt="add-git-package-0" src="https://github.com/user-attachments/assets/e1e4ab90-fdc4-40e2-9768-3b23dc69f12b">
+<img width="640" alt="add-git-package-1" src="https://github.com/user-attachments/assets/96e8afc2-e9a2-4861-b4ae-78e96450062a">
+
 Alternatively add `"com.devolfer.sound": "https://github.com/devolfer/devolfer-sound.git"` to `Packages/manifest.json`.
 
 Downloading & manually importing the content into a folder inside your project is of course also possible.
@@ -43,6 +46,8 @@ Downloading & manually importing the content into a folder inside your project i
 In order to see code hints in your IDE, you must enable generating .csproj files for git packages.  
 In the Unity Editor go to `Preferences|Settings -> External Tools`, mark the checkbox as seen below & regenerate the project files.
 
+<img width="692" alt="preferences-external-tools-enable-git-packages" src="https://github.com/user-attachments/assets/f6d33702-c9ad-4fb7-97b7-c4e3cd8e24a3">
+
 ### UniTask support
 Refer to the [official repo](https://github.com/Cysharp/UniTask) to learn about this awesome package and how to install it.  
 
@@ -50,8 +55,8 @@ Once installed, all code of this package will automatically compile using UniTas
 While this means there is no extra project setup required, it could potentially break any of your existing code.   
 Should you have used any of the async methods of this package already, and expected a C# Task to be returned, be prepared to change them to type `UniTask`.  
 
-Even if you don't intend to work with the async/await flow, I highly recommend installing UniTask anyway.   
-Many synchronous methods that rely on any kind of duration, will then play as **allocation-free** tasks under the hood!
+*Even if you don't intend to work with the async/await flow, I highly recommend installing UniTask anyway.   
+Many synchronous methods that rely on any kind of duration, will then play as **allocation-free** tasks under the hood!*
 
 ## Usage
 This package is primarily intended to be used via scripting.   
@@ -331,30 +336,40 @@ Again, stopping & playing for cross-fading might not be the desired approach.
 If so, please simultaneously invoke two `Fade` calls. Or perhaps refer to controlling volume through [Audio Mixers](#audio-mixers) instead.
 
 ### Audio Mixers
-Those who have dabbled with Audio Mixers in Unity will know, that many outcomes can be achieved with them. This package focuses only on the `Volume Mixing` part, though.   
-By trying to keep it simple and reliable, there are e.g. no `Snapshots` or the likes for volume manipulation involved. It's all just simple `Lerping`.
+Those who have dabbled with Audio Mixers in Unity will know, that many outcomes can be achieved with them. This package focuses only on the volume mixing part, though.   
+By trying to keep it simple and reliable, there are e.g. no `Snapshots` or the likes for volume manipulation involved. It's all just simple lerping.
 
 #### Create and Setup an Audio Mixer in the Editor
 An `AudioMixer` is an asset that resides in the project folder and needs to be created and setup manually in the Editor.   
+
 *You can skip this part and use the `AudioMixerDefault` asset bundled with this package, if it suits your need.*   
+
+<img width="738" alt="audio-mixer-default" src="https://github.com/user-attachments/assets/9dbe0850-42ac-45a3-a6e1-06d89b9d02b1">
 
 It consists of the groups `Master`, `Music` and `SFX`, with the respective `Exposed Parameters`: `VolumeMaster`, `VolumeMusic` and `VolumeSFX`.   
 
-
 To create a mixer, right-click in the `Project Window` or under `Assets` and then `Create -> Audio Mixer`.
 
+<img width="652" alt="create-audio-mixer-asset" src="https://github.com/user-attachments/assets/3b989593-3ab2-4a65-b5c9-3952d8c61566">
 
 This will automatically create the `Master` group. To be able to access the volume of a Mixer Group, an `Exposed Parameter` has to be created.   
 Let's expose the `Master` group by selecting it and then right-clicking on its property in the inspector.
 
+<img width="373" alt="select-mixer-group" src="https://github.com/user-attachments/assets/6fffcbbd-4ce4-4951-86b7-17c02e806d46">
+<img width="522" alt="expose-mixer-volume-parameter" src="https://github.com/user-attachments/assets/e719c0d5-affb-4dd2-8998-c987bd1614c1">
 
-Open the `Audio Mixer Window` by double-clicking it or under `Window -> Audio -> Audio Mixer`.   
+
+Now open the `Audio Mixer Window` by double-clicking it or under `Window -> Audio -> Audio Mixer`.   
 Once opened, the name of the parameter can be changed under the `Exposed Parameters` dropdown by double-clicking.   
-**This is an important step!** The name given here, is how the group will be globally accessible via scripting and by the `SoundManager`.
+
+***This is an important step!** The name given here, is how the group will be globally accessible via scripting and by the `SoundManager`.*
+
+<img width="240" alt="rename-mixer-parameter" src="https://github.com/user-attachments/assets/69fd3ca6-0596-46f0-b7d8-6f418c857597">
 
 
 Any more desired `Audio Mixer Groups` can be added under the `Groups` section by clicking the `+` button and then following the steps of exposing the volume parameter like shown before. 
 
+<img width="522" alt="add-mixer-group" src="https://github.com/user-attachments/assets/70648708-42f5-4400-81d8-e997fae00d08">
 
 #### Register and Unregister Volume Group
 For the `SoundManager` to know, which `AudioMixer` volume groups it can handle, they have to be registered/unregistered.   
@@ -379,12 +394,13 @@ SoundManager.Instance.UnregisterMixerVolumeGroup(mixerVolumeGroup);
 It is important, that the `Exposed Parameter` exists in the referenced `AudioMixer`, otherwise an error will be thrown.   
 
 Doing this in the inspector requires to have the `SoundManager` already in the scene, so that it is accessible through the inspector.
-To create it right-click in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Manager`.   
+To create it, right-click in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Manager`.   
 
-
+<img width="364" alt="add-sound-manager" src="https://github.com/user-attachments/assets/6659a73b-b8d4-4b0b-8b0e-a3e37bf539df">
 
 Any desired groups can then be added in the list of `Mixer Volume Groups Default`.
 
+<img width="534" alt="add-mixer-volume-group-inspector" src="https://github.com/user-attachments/assets/929c0555-7f7c-4bb8-8912-5c965358e8fa">
 
 *If the list is left empty, the `SoundManager` will register/unregister the groups bundled with the `AudioMixerDefault` asset of this package!*
 
