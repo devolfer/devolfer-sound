@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace Devolfer.Sound
 {
@@ -8,6 +10,14 @@ namespace Devolfer.Sound
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour
     {
+        [Header("Configurations")]
+        [Space]
+        [SerializeField] private PlayConfiguration _play;
+        [Space]
+        [SerializeField] private StopConfiguration _stop;
+        [Space]
+        [SerializeField] private FadeConfiguration _fade;
+
         private AudioSource _source;
         private Transform _transform;
 
@@ -16,6 +26,8 @@ namespace Devolfer.Sound
             _source = GetComponent<AudioSource>();
             _source.enabled = false;
             _transform = transform;
+
+            if (_source.playOnAwake) Play();
         }
 
         /// <summary>
@@ -23,7 +35,14 @@ namespace Devolfer.Sound
         /// </summary>
         public void Play()
         {
-            SoundManager.Instance.Play(_source, _transform);
+            SoundManager.Instance.Play(
+                _source,
+                followTarget: _play.Follow ? _transform : default,
+                position: _play.Position,
+                fadeIn: _play.FadeIn,
+                fadeInDuration: _play.FadeInDuration,
+                fadeInEase: _play.FadeInEase,
+                onComplete: _play.OnComplete.Invoke);
         }
 
         /// <summary>
@@ -47,17 +66,12 @@ namespace Devolfer.Sound
         /// </summary>
         public void Stop()
         {
-            SoundManager.Instance.Stop(_source);
-        }
-
-        /// <summary>
-        /// Fades attached <see cref="AudioSource"/> via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
-        /// </summary>
-        /// <param name="targetVolume">The target volume the fade will reach at the end.</param>
-        /// <param name="duration">The duration in seconds the fade will prolong.</param>
-        public void Fade(float targetVolume, float duration)
-        {
-            SoundManager.Instance.Fade(_source, targetVolume, duration);
+            SoundManager.Instance.Stop(
+                _source,
+                fadeOut: _stop.FadeOut,
+                fadeOutDuration: _stop.FadeOutDuration,
+                fadeOutEase: _stop.FadeOutEase,
+                onComplete: _stop.OnComplete.Invoke);
         }
 
         /// <summary>
@@ -66,25 +80,70 @@ namespace Devolfer.Sound
         /// <param name="targetVolume">The target volume the fade will reach at the end.</param>
         public void Fade(float targetVolume)
         {
-            SoundManager.Instance.Fade(_source, targetVolume, 2);
+            SoundManager.Instance.Fade(
+                _source,
+                targetVolume,
+                _fade.FadeDuration,
+                ease: _fade.FadeEase,
+                onComplete: _fade.OnComplete.Invoke);
         }
 
-        /// <summary>
-        /// Fades in attached AudioSource via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
-        /// </summary>
-        /// <param name="duration">The duration in seconds the fade in will prolong.</param>
-        public void FadeIn(float duration)
+        [Serializable]
+        private class PlayConfiguration
         {
-            SoundManager.Instance.Play(_source, _transform, fadeIn: true, fadeInDuration: duration);
+            [Tooltip("Should the sound follow the transform this script is attached to when playing?")]
+            public bool Follow = true;
+            
+            [Tooltip("Either the global position or, when following, the position offset at which the sound is played.")]
+            public Vector3 Position;
+
+            [Tooltip("Should the sound fade in when playing?")]
+            public bool FadeIn;
+            
+            [ShowIf("FadeIn")]
+            [Tooltip("The duration in seconds the fading in will take.")]
+            public float FadeInDuration = .5f;
+            
+            [ShowIf("FadeIn")]
+            [Tooltip("The easing applied when fading in.")]
+            public Ease FadeInEase = Ease.Linear;
+
+            [Space]
+            [Tooltip("Event invoked once sound completes playing.")]
+            public UnityEvent OnComplete;
         }
 
-        /// <summary>
-        /// Fades out attached AudioSource via the <see cref="SoundManager"/> as a <see cref="SoundEntity"/>.
-        /// </summary>
-        /// <param name="duration">The duration in seconds the fade out will prolong.</param>
-        public void FadeOut(float duration)
+        [Serializable]
+        private class StopConfiguration
         {
-            SoundManager.Instance.Stop(_source, fadeOutDuration: duration);
+            [Tooltip("Should the sound fade out when stopping?")]
+            public bool FadeOut = true;
+            
+            [ShowIf("FadeOut")]
+            [Tooltip("The duration in seconds the fading out will take.")]
+            public float FadeOutDuration = .5f;
+            
+            [ShowIf("FadeOut")]
+            [Tooltip("The easing applied when fading out.")]
+            public Ease FadeOutEase = Ease.Linear;
+
+            [Space]
+            [Tooltip("Event invoked once sound completes stopping.")]
+            public UnityEvent OnComplete;
+        }
+
+        [Serializable]
+        private class FadeConfiguration
+        {
+            [Tooltip("The duration in seconds the fade will take.")]
+            public float FadeDuration = 1f;
+            
+            [Tooltip("The easing applied when fading.")]
+            public Ease FadeEase = Ease.Linear;
+
+            [Space]
+            [Tooltip("Event invoked once sound completes fading.")]
+            public UnityEvent OnComplete;
         }
     }
 }
