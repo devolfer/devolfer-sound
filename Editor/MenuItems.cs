@@ -25,5 +25,12 @@ namespace Devolfer.Sound
             GameObject newGameObject = new("SoundEmitter", typeof(SoundEmitter));
             Selection.activeGameObject = newGameObject;
         }
+        
+        [MenuItem("GameObject/Audio/Sound Volume Mixer", priority = 1, secondaryPriority = 2)]
+        private static void CreateSoundMixer()
+        {
+            GameObject newGameObject = new("SoundVolumeMixer", typeof(SoundVolumeMixer));
+            Selection.activeGameObject = newGameObject;
+        }
     }
 }
