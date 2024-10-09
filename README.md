@@ -2,8 +2,8 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-This package provides a lean Sound Manager for any Unity project.
-* Play/Pause/Resume/Stop/Fade individual or all sounds
+This package provides a lean Sound Manager for a Unity project.
+* Play/Pause/Resume/Fade/Stop individual or all sounds
 * Set/Mute/Fade volume of Audio Mixers
 * Efficiently uses object pooling under the hood
 * Access anywhere from code (as persistent singleton)
@@ -48,15 +48,15 @@ Manual import into a folder is of course also possible.
 (Recommended) Even if async/await workflow is not intended to be used, it is very favourable to install UniTask anyway.   
 *Synchronous methods will be invoked as **allocation-free** tasks under the hood!*
 
-The installation guide can be found in UniTasks [official repo](https://github.com/Cysharp/UniTask).   
+The installation guide can be found in the [Official UniTask Repo](https://github.com/Cysharp/UniTask).   
 
 (Warning) Once installed, all code of this package will automatically compile using `UniTask` instead of standard `C# Task`!   
-This will potentially break any existing asynchronous code usage, that was expecting a C# Task return value before.
+This will potentially break any existing asynchronous code usage, that was initially expecting a C# Task return value.
 
 ### Code Hints
-(Recommended) Using code hints is highly encouraged and should be enough to get a grasp of this package.   
+(Recommended) Using code hints is highly encouraged and can be enough to get a grasp of this package.   
 
-To be able to see code hints in an IDE, generating .csproj files for git packages must be enabled.  
+To see them in an IDE, generating .csproj files for git packages must be enabled.  
 This can be done by going to `Preferences|Settings -> External Tools`, marking the checkbox and regenerating the project files.
 
 <img width="692" alt="preferences-external-tools-enable-git-packages" src="https://github.com/user-attachments/assets/f6d33702-c9ad-4fb7-97b7-c4e3cd8e24a3">
@@ -431,7 +431,7 @@ For any finer controlled cross-fading, it is recommended to call multiple fades 
 
 ## Available Components
 ### Sound Emitter
-The `Sound Emitter` component is a simple way of adding a sound, that is handled by the `Sound Manager`, to the scene.   
+The `Sound Emitter` component is a simple way of adding a sound, that is handled by the `Sound Manager`.   
 It can be attached to any gameObject or created by right-clicking in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Emitter`.
 
 <img width="362" alt="add-sound-emitter" src="https://github.com/user-attachments/assets/8828558b-41a5-4e56-ad3d-6c3d3785e2e1">
@@ -446,19 +446,36 @@ The component grants access to the following public methods:
 * **Pause**: Interrupts sound playback, if not currently stopping.
 * **Resume**: Continues sound playback, if paused and not currently stopping.
 * **Fade**: Fades volume of currently playing sound to the given target volume.
-* **Stop**: Stops sound playback before completion (also when looped).
+* **Stop**: Stops sound playback before completion (the only way, when looped).
 
-***Calling the methods with respective configurations will always apply those, so it is important to set them before entering `Play Mode`!***   
+***Calling the methods will always apply the respective configurations. It is therefore important to set them before entering `Play Mode`!***   
 
 The image below shows an example usage of a `Button` component and how one could invoke the methods via the `onClick` event.
 
 <img width="580" alt="sound-emitter-public-methods" src="https://github.com/user-attachments/assets/da049164-8c4f-4b8b-b5e8-61f0c3aef5da">
 
 ### Sound Volume Mixer
+A `Sound Volume Mixer` simplifies volume mixing of an `Audio Mixer` group and uses the `Sound Manager` for it.   
+This component can be added to any GameObject in the scene.   
+Or in creating it via the `Hierarchy` by right-clicking or using the `GameObject` menu, then choosing `Audio -> Sound Volume Mixer`.
 
 <img width="363" alt="add-sound-volume-mixer" src="https://github.com/user-attachments/assets/eca71cd0-d8e8-44b7-ae38-e01374ed1014">
 
+For the component to work, a reference to the `Audio Mixer` asset is mandatory and the `Exposed Parameter` name of the group has to be defined.   
+Section [Mandatory Setup](#mandatory-setup) explains how to create such group and expose a parameter for it.
+
 <img width="383" alt="sound-volume-mixer-overview" src="https://github.com/user-attachments/assets/112d5418-32ea-4c52-acb8-a2ee796d7dca">
+
+The following methods of the component are usable:
+* **Set**: Changes group volume to the given value instantly.
+* **Increase**: Instantly raises group volume step-wise (e.g. for `Volume Segments = 10`: +10%).
+* **Decrease**: Instantly lowers group volume step-wise (e.g. for `Volume Segments = 10`: -10%).
+* **Fade**: Fades group volume to the given target volume.
+* **Mute**: Either mutes or un-mutes group volume.
+
+***`Fade Configuration` determines, how volume fading will behave and must be setup before entering `Play Mode`!***   
+
+An example usage of the above methods can be seen below with a `Button` component and its `onClick` event.
 
 <img width="600" alt="sound-volume-mixer-public-methods" src="https://github.com/user-attachments/assets/3354934d-fb70-4725-9793-6e5d39cbe851">
 
