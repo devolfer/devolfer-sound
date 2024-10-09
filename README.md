@@ -1,6 +1,6 @@
 # Devolfer Sound
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 This package provides a lean Sound Manager for any Unity project.
 * Play/Pause/Resume/Stop/Fade individual or all sounds
@@ -8,7 +8,7 @@ This package provides a lean Sound Manager for any Unity project.
 * Efficiently uses object pooling under the hood
 * Access anywhere from code (as persistent singleton)
 * Async/Await support (including [UniTask](https://github.com/Cysharp/UniTask)!)
-* Sound Emitter component for non-coders
+* Sound Emitter & Sound Volume Mixer components for non-coders
 
 ## Table of Contents
 * [Getting started](#getting-started)
@@ -26,7 +26,9 @@ This package provides a lean Sound Manager for any Unity project.
   * [Set Volume](#set-volume)
   * [Mute and Unmute Volume](#mute-and-unmute-volume)
   * [Fade Volume](#fade-volume)
-* [Sound Emitter Component](#sound-emitter-component)
+* [Available Components](#available-components)
+  * [Sound Emitter](#sound-emitter)
+  * [Sound Volume Mixer](#sound-volume-mixer)
 * [License](#license)
 * [Final Words](#final-words)
 
@@ -44,7 +46,7 @@ Manual import into a folder is of course also possible.
 
 ### UniTask
 (Recommended) Even if async/await workflow is not intended to be used, it is very favourable to install UniTask anyway.   
-*Synchronous methods, will play as **allocation-free** tasks under the hood!*
+*Synchronous methods will be invoked as **allocation-free** tasks under the hood!*
 
 The installation guide can be found in UniTasks [official repo](https://github.com/Cysharp/UniTask).   
 
@@ -79,9 +81,9 @@ public class YourBehaviour : MonoBehaviour
         // Plays clip through the SoundManager instance
         SoundManager.Instance.Play(audioClip);
         
-        // *** There is no need for an AudioSource component
+        // *** There is no need for an AudioSource component.
         // The SoundManager will get a SoundEntity instance from its pool, 
-        // play the clip through it, and then return it back to the pool ***
+        // play the clip through it, and then return it back to the pool. ***
     }
 }
 ```
@@ -124,7 +126,7 @@ for (int i = 0; i < amount; i++) pitch *= 1.059463f;
 // Plays via SoundProperties with clip, volume & pitch
 SoundManager.Instance.Play(new SoundProperties(audioClip) { Volume = volume, Pitch = pitch });
 
-// *** Passing new SoundProperties like above is just for demonstration
+// *** Passing new SoundProperties like above is just for demonstration.
 // When possible those should be cached & reused! ***
 ```
 
@@ -140,8 +142,8 @@ SoundManager.Instance.Play(audioSource);
 // Plays with 'audioSource' properties, but this time looped
 SoundManager.Instance.Play(new SoundProperties(audioSource) { Loop = true });
 
-// *** The call above passes an implicit SoundProperties copy of the AudioSource properties
-// Useful for selectively changing AudioSource properties at call of Play ***
+// *** The call above passes an implicit SoundProperties copy of the AudioSource properties.
+// This can be useful for selectively changing AudioSource properties at call of Play. ***
 ```
 
 Playing a sound async can be done by calling the `PlayAsync` method.   
@@ -161,9 +163,9 @@ private async void YourAsyncMethod()
         await SoundManager.Instance.PlayAsync(audioClip, cancellationToken: someCancellationToken);
         
         // *** Using tokens is optional, as each playing SoundEntity handles 
-        // its own cancellation when needed ***
+        // its own cancellation when needed. ***
 
-        // Plays clip with SoundProperties at half volume & passing 'someCancellationToken'
+        // Plays clip with SoundProperties at half volume & passes 'someCancellationToken'
         await SoundManager.Instance.PlayAsync(
             new SoundProperties(audioClip) { Volume = .5f },
             cancellationToken: someCancellationToken);
@@ -199,8 +201,7 @@ await SoundManager.Instance.PlayAsync(audioSource);
 // The SoundManager will cache both in a Dictionary entry for later easy access! ***
 ```
 
-Calling `Pause` and `Resume` can then be called on any playing sound.   
-A sound, that is in the process of stopping, cannot be paused!
+Calling `Pause` and `Resume` can then be called on any playing sound.
 
 ```csharp
 // Pauses & Resumes cached/outed 'soundEntity'
@@ -214,13 +215,15 @@ SoundManager.Instance.Resume(audioSource);
 // Pauses & Resumes all sounds
 SoundManager.Instance.PauseAll();
 SoundManager.Instance.ResumeAll();
+
+// *** A sound, that is in the process of stopping, cannot be paused! ***
 ```
 
 ### Stop
 Stopping also requires to pass a `SoundEntity` or an `AudioSource`.
 
 ```csharp
-// Stops both cached 'soundEntity' & referenced original 'audioSource'
+// Stops both cached 'soundEntity' & 'audioSource'
 SoundManager.Instance.Stop(soundEntity);
 SoundManager.Instance.Stop(audioSource);
 
@@ -246,13 +249,12 @@ SoundManager.Instance.Stop(
 // Stops cached 'soundEntity' with no fade out
 SoundManager.Instance.Stop(soundEntity, fadeOut: false);
 
-// Stops referenced original 'audioSource' async with default fade out
+// Stops 'audioSource' async with default fade out
 await SoundManager.Instance.StopAsync(audioSource, cancellationToken: someCancellationToken);
 ```
 
 ### Fade
-For fading a sound, it is mandatory to set a `targetVolume` and `duration`.   
-Stopping sounds cannot be faded and paused sounds will automatically resume when faded.
+For fading a sound, it is mandatory to set a `targetVolume` and `duration`.
 
 ```csharp
 // Fades cached 'soundEntity' to volume 0.2 over 1 second
@@ -267,11 +269,13 @@ SoundManager.Instance.Fade(
     ease: Ease.InExpo, 
     onComplete: () => Debug.Log("Quickly faded in paused sound again!"));
 
-// Fades referenced original 'audioSource' to volume 0.5 with default ease over 2 seconds
-await SoundManager.Instance.FadeAsync(audioSource, .5f, 2f, cancellationToken: someCancellationToken)
-```
+// Fades 'audioSource' to volume 0.5 with default ease over 2 seconds
+await SoundManager.Instance.FadeAsync(audioSource, .5f, 2f, cancellationToken: someCancellationToken);
 
-The `CrossFade` and `CrossFadeAsync` methods provide simple ways to simultaneously fade two sounds out and in.   
+// *** Stopping sounds cannot be faded and paused sounds will automatically resume when faded! ***    
+```
+---
+The `CrossFade` and `CrossFadeAsync` methods provide ways to simultaneously fade two sounds out and in.   
 This means, an existing sound will be stopped fading out, while a new one will play fading in.  
 
 ```csharp
@@ -282,7 +286,7 @@ SoundEntity newSoundEntity = SoundManager.Instance.CrossFade(1f, soundEntity, ne
 await SoundManager.Instance.CrossFadeAsync(out newSoundEntity, 1f, soundEntity, new SoundProperties(audioClip));
 
 // *** The returned SoundEntity will be the newly playing one 
-// and it will always fade in to full volume ***
+// and it will always fade in to full volume. ***
 ```
 
 Simplified cross-fading might not lead to the desired outcome.   
@@ -291,16 +295,19 @@ If so, invoking two `Fade` calls simultaneously will grant finer fading control.
 ## Audio Mixers
 ### Mandatory Setup
 *This section can be skipped, if the `AudioMixerDefault` asset included in this package suffices.*   
+
 It consists of the groups `Master`, `Music` and `SFX`, with respective `Exposed Parameters`: `VolumeMaster`, `VolumeMusic` and `VolumeSFX`.
 
 <img width="738" alt="audio-mixer-default" src="https://github.com/user-attachments/assets/9dbe0850-42ac-45a3-a6e1-06d89b9d02b1">
 
-An `AudioMixer` is an asset that resides in the project folder and needs to be created and setup manually in the Editor.
+---
+An `AudioMixer` is an asset that resides in the project folder and needs to be created and setup manually in the Editor.   
 It can be created by right-clicking in the `Project Window` or under `Assets` and then `Create -> Audio Mixer`.
 
 <img width="652" alt="create-audio-mixer-asset" src="https://github.com/user-attachments/assets/3b989593-3ab2-4a65-b5c9-3952d8c61566">
 
-This will automatically create the `Master` group. To access the volume of a Mixer Group, an `Exposed Parameter` has to be created.   
+This will automatically create the `Master` group.   
+To access the volume of a Mixer Group, an `Exposed Parameter` has to be created.   
 Selecting the `Master` group and right-clicking on the volume property in the inspector allows exposing the parameter.
 
 <img width="373" alt="select-mixer-group" src="https://github.com/user-attachments/assets/6fffcbbd-4ce4-4951-86b7-17c02e806d46">
@@ -315,16 +322,17 @@ Once opened, the name of the parameter can be changed under the `Exposed Paramet
 
 Any other custom groups must be added under the `Groups` section by clicking the `+` button.  
 
-***Just like before, exposing the volume parameters manually is unfortunately a mandatory step!***
-
 <img width="522" alt="add-mixer-group" src="https://github.com/user-attachments/assets/70648708-42f5-4400-81d8-e997fae00d08">
+
+
+***Just like before, exposing the volume parameters manually is unfortunately a mandatory step!***
 
 ### Register and Unregister Volume Group
 To let the `SoundManager` know, which `AudioMixer` volume groups it should manage, they have to be registered and unregistered.   
 This can be done via scripting or the Editor.
 
-Registering/Unregistering by code is straightforward, however the methods expect an instance of type `MixerVolumeGroup`.   
-This is a custom class that provides various functionality for handling a volume group in an `AudioMixer`.
+This is straightforward by code, however the methods expect an instance of type `MixerVolumeGroup`.   
+It's a custom class that provides various functionality for handling a volume group in an `AudioMixer`.
 
 ```csharp
 // Injects AudioMixer asset via Editor Inspector
@@ -333,8 +341,8 @@ This is a custom class that provides various functionality for handling a volume
 // Creates a MixerVolumeGroup instance with 'audioMixer' & the pre-setup exposed parameter 'VolumeMusic'
 MixerVolumeGroup mixerVolumeGroup = new(audioMixer, "VolumeMusic", volumeSegments: 10);
 
-// *** Volume segments can optionally be defined for allowing incremental/decremental volume change
-// This can e.g. be useful in segmented UI controls *** 
+// *** Volume segments can optionally be defined for allowing incremental/decremental volume change.
+// This can e.g. be useful in segmented UI controls. *** 
 
 // Registers & Unregisters 'mixerVolumeGroup' with & from the SoundManager
 SoundManager.Instance.RegisterMixerVolumeGroup(mixerVolumeGroup);
@@ -343,9 +351,10 @@ SoundManager.Instance.UnregisterMixerVolumeGroup(mixerVolumeGroup);
 // *** It is important, that the exposed parameter exists in the referenced AudioMixer.
 // Otherwise an error will be thrown! ***
 ```
+---
+Registering via Editor can be done through the [Sound Volume Mixer](#sound-volume-mixer) component or the `SoundManager` in the scene.   
 
-Registering via Editor requires the `SoundManager` being present in the scene before Play Mode.   
-Right-clicking in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Manager` will create an instance.   
+For the latter, right-clicking in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Manager` will create an instance.   
 
 <img width="364" alt="add-sound-manager" src="https://github.com/user-attachments/assets/6659a73b-b8d4-4b0b-8b0e-a3e37bf539df">
 
@@ -420,7 +429,11 @@ await SoundManager.Instance.CrossFadeMixerGroupVolumesAsync("VolumeMusic", "Volu
 
 For any finer controlled cross-fading, it is recommended to call multiple fades simultaneously.
 
-## Sound Emitter Component
+## Available Components
+### Sound Emitter
+
+
+### Sound Volume Mixer
 
 
 ## License

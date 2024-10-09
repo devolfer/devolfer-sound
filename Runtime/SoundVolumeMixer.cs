@@ -4,6 +4,9 @@ using UnityEngine.Events;
 
 namespace Devolfer.Sound
 {
+    /// <summary>
+    /// Allows volume mixing of the defined <see cref="MixerVolumeGroup"/> via the <see cref="SoundManager"/>.
+    /// </summary>
     public class SoundVolumeMixer : MonoBehaviour
     {
         [Tooltip(
