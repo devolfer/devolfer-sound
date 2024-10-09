@@ -442,6 +442,8 @@ For any finer controlled cross-fading, it is recommended to call multiple fades 
 
 <img width="406" alt="sound-emitter-configuration-fade" src="https://github.com/user-attachments/assets/e5cd2e3f-3f4b-4392-939e-f0bb1dad0eda">
 
+<img width="580" alt="sound-emitter-public-methods" src="https://github.com/user-attachments/assets/da049164-8c4f-4b8b-b5e8-61f0c3aef5da">
+
 ### Sound Volume Mixer
 
 <img width="363" alt="add-sound-volume-mixer" src="https://github.com/user-attachments/assets/eca71cd0-d8e8-44b7-ae38-e01374ed1014">
@@ -451,6 +453,8 @@ For any finer controlled cross-fading, it is recommended to call multiple fades 
 <img width="405" alt="sound-volume-mixer-group" src="https://github.com/user-attachments/assets/0e67f4b8-1291-4f85-a312-75633eb47ca2">
 
 <img width="405" alt="sound-volume-mixer-configuration-fade" src="https://github.com/user-attachments/assets/3e55daf6-a114-427c-b55a-0cefe3eb18cc">
+
+<img width="600" alt="sound-volume-mixer-public-methods" src="https://github.com/user-attachments/assets/3354934d-fb70-4725-9793-6e5d39cbe851">
 
 ## License
 
