@@ -154,7 +154,7 @@ namespace Devolfer.Sound
             
             SoundEntity entity = _soundEntityPool.Get();
 
-            entity = entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
             AddPlaying(entity);
 
             return entity;
@@ -192,7 +192,7 @@ namespace Devolfer.Sound
             
             SoundEntity entity = _soundEntityPool.Get();
 
-            entity = entity.Play(audioSource, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
+            entity.Play(audioSource, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
             AddPlaying(entity);
 
             return entity;
@@ -438,76 +438,88 @@ namespace Devolfer.Sound
         /// Pauses a playing sound handled by the Sound Manager.
         /// </summary>
         /// <param name="entity">The sound entity that is currently playing.</param>
+        /// <returns>True, if pausing was successful.</returns>
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
-        public void Pause(SoundEntity entity)
+        public bool Pause(SoundEntity entity)
         {
             SetupIfNeeded();
             
-            if (!HasPlaying(entity)) return;
-            if (HasStopping(entity)) return;
+            if (!HasPlaying(entity)) return false;
+            if (HasStopping(entity)) return false;
 
             RemovePlaying(entity);
 
             entity.Pause();
 
             AddPaused(entity);
+
+            return true;
         }
 
         /// <summary>
         /// Pauses a playing sound handled by the Sound Manager.
         /// </summary>
         /// <param name="audioSource">The source of the sound.</param>
+        /// <returns>True, if pausing was successful.</returns>
         /// <remarks>Has no effect if the source is currently stopping.</remarks>
-        public void Pause(AudioSource audioSource)
+        public bool Pause(AudioSource audioSource)
         {
             SetupIfNeeded();
             
-            if (HasStopping(audioSource)) return;
-            if (!HasPlaying(audioSource, out SoundEntity entity)) return;
+            if (HasStopping(audioSource)) return false;
+            if (!HasPlaying(audioSource, out SoundEntity entity)) return false;
 
             RemovePlaying(entity);
             
             entity.Pause();
 
             AddPaused(entity);
+            
+            return true;
         }
 
         /// <summary>
         /// Resumes a paused sound handled by the Sound Manager.
         /// </summary>
         /// <param name="entity">The sound entity that is currently paused.</param>
+        /// <returns>True, if resuming was successful.</returns>
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
-        public void Resume(SoundEntity entity)
+        public bool Resume(SoundEntity entity)
         {
             SetupIfNeeded();
             
-            if (!HasPaused(entity)) return;
-            if (HasStopping(entity)) return;
+            if (!HasPaused(entity)) return false;
+            if (HasStopping(entity)) return false;
 
             RemovePaused(entity);
 
             entity.Resume();
 
             AddPlaying(entity);
+            
+            return true;
         }
 
         /// <summary>
         /// Resumes a paused sound handled by the Sound Manager.
         /// </summary>
         /// <param name="audioSource">The source of the sound.</param>
+        /// <returns>True, if resuming was successful.</returns>
         /// <remarks>Has no effect if the source is currently stopping.</remarks>
-        public void Resume(AudioSource audioSource)
+        public bool Resume(AudioSource audioSource)
         {
             SetupIfNeeded();
             
-            if (HasStopping(audioSource)) return;
-            if (!HasPaused(audioSource, out SoundEntity entity)) return;
+            if (HasStopping(audioSource)) return false;
+            if (!HasPaused(audioSource, out SoundEntity entity)) return false;
             
             RemovePaused(entity);
 
             entity.Resume();
 
             AddPlaying(entity);
+
+            return true;
         }
 
         /// <summary>
@@ -662,9 +674,11 @@ namespace Devolfer.Sound
         /// Pauses all currently playing sounds handled by the Sound Manager.
         /// </summary>
         /// <remarks>Has no effect on sounds currently stopping.</remarks>
-        public void PauseAll()
+        public bool PauseAll()
         {
             SetupIfNeeded();
+
+            bool successful = false;
             
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
             {
@@ -672,17 +686,22 @@ namespace Devolfer.Sound
                 
                 entity.Pause();
                 AddPaused(entity);
+                successful = true;
             }
             
             ClearPlayingEntities();
+            
+            return successful;
         }
 
         /// <summary>
         /// Resumes all currently paused sounds handled by the Sound Manager.
         /// </summary>
-        public void ResumeAll()
+        public bool ResumeAll()
         {
             SetupIfNeeded();
+            
+            bool successful = false;
             
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPaused)
             {
@@ -690,9 +709,12 @@ namespace Devolfer.Sound
                 
                 entity.Resume();
                 AddPlaying(entity);
+                successful = true;
             }
             
             ClearPausedEntities();
+            
+            return successful;
         }
 
         /// <summary>
@@ -1315,42 +1337,51 @@ namespace Devolfer.Sound
         /// </summary>
         /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
         /// <param name="value">The volumes' new value.</param>
+        /// <returns>True, if group with exposedParameter is registered.</returns>
         /// <remarks>Changing a volume stops any ongoing volume fades applied in the mixer.</remarks>
-        public void SetMixerGroupVolume(string exposedParameter, float value)
+        public bool SetMixerGroupVolume(string exposedParameter, float value)
         {
-            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return false;
 
             StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Set(value);
+
+            return true;
         }
 
         /// <summary>
         /// Increases the volume of an Audio Mixer Group incrementally.
         /// </summary>
         /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <returns>True, if group with exposedParameter is registered.</returns>
         /// <remarks>Has no effect if no Volume Segments are defined in the <see cref="MixerVolumeGroup"/>.</remarks>
-        public void IncreaseMixerGroupVolume(string exposedParameter)
+        public bool IncreaseMixerGroupVolume(string exposedParameter)
         {
-            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return false;
 
             StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Increase();
+
+            return true;
         }
 
         /// <summary>
         /// Decreases the volume of an Audio Mixer Group incrementally.
         /// </summary>
         /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
+        /// <returns>True, if group with exposedParameter is registered.</returns>
         /// <remarks>Has no effect if no Volume Segments are defined in the <see cref="MixerVolumeGroup"/>.</remarks>
-        public void DecreaseMixerGroupVolume(string exposedParameter)
+        public bool DecreaseMixerGroupVolume(string exposedParameter)
         {
-            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return false;
 
             StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Decrease();
+
+            return true;
         }
 
         /// <summary>
@@ -1358,13 +1389,16 @@ namespace Devolfer.Sound
         /// </summary>
         /// <param name="exposedParameter">The exposed parameter with which to access the group, e.g. 'VolumeMusic'.</param>
         /// <param name="value">True = muted, False = unmuted.</param>
-        public void MuteMixerGroupVolume(string exposedParameter, bool value)
+        /// <returns>True, if group with exposedParameter is registered.</returns>
+        public bool MuteMixerGroupVolume(string exposedParameter, bool value)
         {
-            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return false;
 
             StopMixerFading(exposedParameter);
 
             mixerVolumeGroup.Mute(value);
+
+            return true;
         }
 
         /// <summary>
@@ -1375,13 +1409,14 @@ namespace Devolfer.Sound
         /// <param name="duration">The duration in seconds the fade will prolong.</param>
         /// <param name="ease">The easing applied when fading.</param>
         /// <param name="onComplete">Optional callback once mixer completes fading.</param>
-        public void FadeMixerGroupVolume(string exposedParameter,
+        /// <returns>True, if group with exposedParameter is registered.</returns>
+        public bool FadeMixerGroupVolume(string exposedParameter,
                                          float targetVolume,
                                          float duration,
                                          Ease ease = Ease.Linear,
                                          Action onComplete = null)
         {
-            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return;
+            if (!MixerVolumeGroupRegistered(exposedParameter, out MixerVolumeGroup mixerVolumeGroup)) return false;
 
             StopMixerFading(exposedParameter);
 
@@ -1391,7 +1426,7 @@ namespace Devolfer.Sound
 
             DoFadeTask(cts.Token).Forget();
 
-            return;
+            return true;
 
             async UniTaskVoid DoFadeTask(CancellationToken cancellationToken)
             {
@@ -1404,7 +1439,7 @@ namespace Devolfer.Sound
 #else
             _mixerFadeRoutines.TryAdd(exposedParameter, StartCoroutine(DoFadeRoutine()));
 
-            return;
+            return true;
 
             IEnumerator DoFadeRoutine()
             {
@@ -1452,13 +1487,21 @@ namespace Devolfer.Sound
         /// <param name="fadeInExposedParameter">The exposed parameter with which to access the group fading in, e.g. 'VolumeMusic'.</param>
         /// <param name="duration">The duration in seconds the cross-fade will prolong.</param>
         /// <param name="onComplete">Optional callback once mixer completes cross-fading.</param>
-        public void CrossFadeMixerGroupVolumes(string fadeOutExposedParameter,
+        /// <returns>True, if both fadeOutExposedParameter and fadeInExposedParameter are registered.</returns>
+        public bool CrossFadeMixerGroupVolumes(string fadeOutExposedParameter,
                                                string fadeInExposedParameter,
                                                float duration,
                                                Action onComplete = null)
         {
+            bool bothRegistered = MixerVolumeGroupRegistered(fadeOutExposedParameter, out MixerVolumeGroup _) &&
+                                  MixerVolumeGroupRegistered(fadeInExposedParameter, out MixerVolumeGroup _);
+
+            if (!bothRegistered) return false;
+            
             FadeMixerGroupVolume(fadeOutExposedParameter, 0, duration);
             FadeMixerGroupVolume(fadeInExposedParameter, 1, duration, onComplete: onComplete);
+
+            return true;
         }
 
         /// <summary>
