@@ -30,7 +30,6 @@ This package provides a lean sound manager for a Unity project.
   * [Sound Emitter](#sound-emitter)
   * [Sound Volume Mixer](#sound-volume-mixer)
 * [License](#license)
-* [Final Words](#final-words)
 
 ## Getting started
 ### Installation
@@ -480,5 +479,4 @@ An example usage of the above methods can be seen below with a `Button` componen
 <img width="600" alt="sound-volume-mixer-public-methods" src="https://github.com/user-attachments/assets/3354934d-fb70-4725-9793-6e5d39cbe851">
 
 ## License
-
-## Final Words
+This package is under the MIT License.
