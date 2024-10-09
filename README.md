@@ -2,7 +2,7 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-This package provides a lean Sound Manager for a Unity project.
+This package provides a lean sound manager for a Unity project.
 * Play/Pause/Resume/Fade/Stop individual or all sounds
 * Set/Mute/Fade volume of Audio Mixers
 * Efficiently uses object pooling under the hood
@@ -34,7 +34,7 @@ This package provides a lean Sound Manager for a Unity project.
 
 ## Getting started
 ### Installation
-(Recommended) Through the Package Manager in the Editor as a git package: `https://github.com/devolfer/devolfer-sound.git`.   
+Through the Package Manager in the Editor as a git package: `https://github.com/devolfer/devolfer-sound.git`.   
 The Package Manager can be opened under `Window -> Package Manager`.
 
 <img width="640" alt="add-git-package-0" src="https://github.com/user-attachments/assets/e1e4ab90-fdc4-40e2-9768-3b23dc69f12b">
@@ -45,16 +45,16 @@ Or as `"com.devolfer.sound": "https://github.com/devolfer/devolfer-sound.git"` i
 Manual import into a folder is of course also possible.
 
 ### UniTask
-(Recommended) Even if async/await workflow is not intended to be used, it is very favourable to install UniTask anyway.   
+Even if async/await workflow is not intended to be used, it is very favourable to install UniTask anyway.   
 *Synchronous methods will be invoked as **allocation-free** tasks under the hood!*
 
 The installation guide can be found in the [Official UniTask Repo](https://github.com/Cysharp/UniTask).   
 
-(Warning) Once installed, all code of this package will automatically compile using `UniTask` instead of standard `C# Task`!   
+Once installed, all code of this package will automatically compile using `UniTask` instead of standard `C# Task`!   
 This will potentially break any existing asynchronous code usage, that was initially expecting a C# Task return value.
 
 ### Code Hints
-(Recommended) Using code hints is highly encouraged and can be enough to get a grasp of this package.   
+Using code hints is highly encouraged and can be enough to get a grasp of this package.   
 
 To see them in an IDE, generating .csproj files for git packages must be enabled.  
 This can be done by going to `Preferences|Settings -> External Tools`, marking the checkbox and regenerating the project files.
@@ -457,7 +457,7 @@ The image below shows an example usage of a `Button` component and how one could
 ### Sound Volume Mixer
 A `Sound Volume Mixer` simplifies volume mixing of an `Audio Mixer` group and uses the `Sound Manager` for it.   
 This component can be added to any GameObject in the scene.   
-Or in creating it via the `Hierarchy` by right-clicking or using the `GameObject` menu, then choosing `Audio -> Sound Volume Mixer`.
+Or by creating it via right-clicking in the `Hierarchy` or using the `GameObject` menu, then choosing `Audio -> Sound Volume Mixer`.
 
 <img width="363" alt="add-sound-volume-mixer" src="https://github.com/user-attachments/assets/eca71cd0-d8e8-44b7-ae38-e01374ed1014">
 
