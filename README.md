@@ -431,18 +431,28 @@ For any finer controlled cross-fading, it is recommended to call multiple fades 
 
 ## Available Components
 ### Sound Emitter
+The `Sound Emitter` component is a simple way of adding a sound, that is handled by the `Sound Manager`, to the scene.   
+It can be attached to any gameObject or created by right-clicking in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Emitter`.
 
 <img width="362" alt="add-sound-emitter" src="https://github.com/user-attachments/assets/8828558b-41a5-4e56-ad3d-6c3d3785e2e1">
 
+An `AudioSource` component will automatically be added if not already present.   
+Through it and the `Configurations` `Play`, `Stop` and `Fade` it is possible to define the sound behaviour in detail.
+
 <img width="406" alt="sound-emitter-overview" src="https://github.com/user-attachments/assets/0e3cb2fd-856c-412c-b289-613c36ea3436">
+ 
+The component grants access to the following public methods:
+* **Play**: Starts sound playback, if not already playing.
+* **Pause**: Interrupts sound playback, if not currently stopping.
+* **Resume**: Continues sound playback, if paused and not currently stopping.
+* **Fade**: Fades volume of currently playing sound to the given target volume.
+* **Stop**: Stops sound playback before completion (also when looped).
 
-<img width="406" alt="sound-emitter-configuration-play" src="https://github.com/user-attachments/assets/db4ab53b-8a72-424d-ac8a-79b73ae731fb">
-
-<img width="406" alt="sound-emitter-configuration-stop" src="https://github.com/user-attachments/assets/fc316f2d-2fa8-4e8b-82f8-79e2c43741b3">
-
-<img width="406" alt="sound-emitter-configuration-fade" src="https://github.com/user-attachments/assets/e5cd2e3f-3f4b-4392-939e-f0bb1dad0eda">
+***Calling the methods with respective configurations will always apply those, so it is important to set them before entering `Play Mode`!***   
 
 <img width="580" alt="sound-emitter-public-methods" src="https://github.com/user-attachments/assets/da049164-8c4f-4b8b-b5e8-61f0c3aef5da">
+
+The image above shows an example usage of a `Button` component and how one could invoke the `Sound Emitter` methods via the `onClick` event.
 
 ### Sound Volume Mixer
 
