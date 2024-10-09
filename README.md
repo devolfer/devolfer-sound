@@ -439,7 +439,7 @@ It can be attached to any gameObject or created by right-clicking in the `Hierar
 An `AudioSource` component will automatically be added if not already present.   
 Through it and the `Configurations` `Play`, `Stop` and `Fade` it is possible to define the sound behaviour in detail.
 
-<img width="406" alt="sound-emitter-overview" src="https://github.com/user-attachments/assets/0e3cb2fd-856c-412c-b289-613c36ea3436">
+<img width="321" alt="sound-emitter-overview" src="https://github.com/user-attachments/assets/092573ec-a987-4a8e-9cf2-dfa85bcc668e">
  
 The component grants access to the following public methods:
 * **Play**: Starts sound playback, if not already playing.
@@ -450,19 +450,15 @@ The component grants access to the following public methods:
 
 ***Calling the methods with respective configurations will always apply those, so it is important to set them before entering `Play Mode`!***   
 
-<img width="580" alt="sound-emitter-public-methods" src="https://github.com/user-attachments/assets/da049164-8c4f-4b8b-b5e8-61f0c3aef5da">
+The image below shows an example usage of a `Button` component and how one could invoke the methods via the `onClick` event.
 
-The image above shows an example usage of a `Button` component and how one could invoke the `Sound Emitter` methods via the `onClick` event.
+<img width="580" alt="sound-emitter-public-methods" src="https://github.com/user-attachments/assets/da049164-8c4f-4b8b-b5e8-61f0c3aef5da">
 
 ### Sound Volume Mixer
 
 <img width="363" alt="add-sound-volume-mixer" src="https://github.com/user-attachments/assets/eca71cd0-d8e8-44b7-ae38-e01374ed1014">
 
-<img width="405" alt="sound-volume-mixer-overview" src="https://github.com/user-attachments/assets/7d1cccf6-cb8c-429f-bf8c-e2d11d0a3097">
-
-<img width="405" alt="sound-volume-mixer-group" src="https://github.com/user-attachments/assets/0e67f4b8-1291-4f85-a312-75633eb47ca2">
-
-<img width="405" alt="sound-volume-mixer-configuration-fade" src="https://github.com/user-attachments/assets/3e55daf6-a114-427c-b55a-0cefe3eb18cc">
+<img width="383" alt="sound-volume-mixer-overview" src="https://github.com/user-attachments/assets/112d5418-32ea-4c52-acb8-a2ee796d7dca">
 
 <img width="600" alt="sound-volume-mixer-public-methods" src="https://github.com/user-attachments/assets/3354934d-fb70-4725-9793-6e5d39cbe851">
 
