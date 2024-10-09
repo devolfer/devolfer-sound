@@ -35,6 +35,8 @@ namespace Devolfer.Sound
             "\n\nIf none are provided, the default Audio Mixer and groups bundled with the package will be used.")]
         [SerializeField] private MixerVolumeGroup[] _mixerVolumeGroupsDefault;
 
+        private bool _setup;
+        
         private ObjectPool<SoundEntity> _soundEntityPool;
 
         private Dictionary<SoundEntity, AudioSource> _entitiesPlaying;
@@ -58,6 +60,15 @@ namespace Devolfer.Sound
 
             if (s_instance != this) return;
 
+            SetupIfNeeded();
+        }
+
+        private void SetupIfNeeded()
+        {
+            if (_setup) return;
+            
+            _setup = true;
+            
             SetupSoundEntities();
             SetupMixers();
         }
@@ -139,6 +150,8 @@ namespace Devolfer.Sound
                                 Ease fadeInEase = Ease.Linear,
                                 Action onComplete = null)
         {
+            SetupIfNeeded();
+            
             SoundEntity entity = _soundEntityPool.Get();
 
             entity = entity.Play(properties, followTarget, position, fadeIn, fadeInDuration, fadeInEase, onComplete);
@@ -167,6 +180,8 @@ namespace Devolfer.Sound
                                 Ease fadeInEase = Ease.Linear,
                                 Action onComplete = null)
         {
+            SetupIfNeeded();
+            
             if (HasPlaying(audioSource, out SoundEntity playingEntity)) return playingEntity;
             
             if (HasPaused(audioSource, out SoundEntity pausedEntity))
@@ -233,6 +248,8 @@ namespace Devolfer.Sound
                                      Ease fadeInEase = Ease.Linear,
                                      CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             entity = _soundEntityPool.Get();
 
             DynamicTask task = entity.PlayAsync(
@@ -270,6 +287,8 @@ namespace Devolfer.Sound
                                      Ease fadeInEase = Ease.Linear,
                                      CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             entity = _soundEntityPool.Get();
 
             DynamicTask task = entity.PlayAsync(
@@ -307,6 +326,8 @@ namespace Devolfer.Sound
                                      Ease fadeInEase = Ease.Linear,
                                      CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             entity = _soundEntityPool.Get();
 
             DynamicTask task = entity.PlayAsync(
@@ -420,6 +441,8 @@ namespace Devolfer.Sound
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
         public void Pause(SoundEntity entity)
         {
+            SetupIfNeeded();
+            
             if (!HasPlaying(entity)) return;
             if (HasStopping(entity)) return;
 
@@ -437,6 +460,8 @@ namespace Devolfer.Sound
         /// <remarks>Has no effect if the source is currently stopping.</remarks>
         public void Pause(AudioSource audioSource)
         {
+            SetupIfNeeded();
+            
             if (HasStopping(audioSource)) return;
             if (!HasPlaying(audioSource, out SoundEntity entity)) return;
 
@@ -454,6 +479,8 @@ namespace Devolfer.Sound
         /// <remarks>Has no effect if the entity is currently stopping.</remarks>
         public void Resume(SoundEntity entity)
         {
+            SetupIfNeeded();
+            
             if (!HasPaused(entity)) return;
             if (HasStopping(entity)) return;
 
@@ -471,6 +498,8 @@ namespace Devolfer.Sound
         /// <remarks>Has no effect if the source is currently stopping.</remarks>
         public void Resume(AudioSource audioSource)
         {
+            SetupIfNeeded();
+            
             if (HasStopping(audioSource)) return;
             if (!HasPaused(audioSource, out SoundEntity entity)) return;
             
@@ -496,6 +525,8 @@ namespace Devolfer.Sound
                          Ease fadeOutEase = Ease.Linear,
                          Action onComplete = null)
         {
+            SetupIfNeeded();
+            
             bool playingEntity = HasPlaying(entity);
             bool pausedEntity = HasPaused(entity);
 
@@ -533,6 +564,8 @@ namespace Devolfer.Sound
                          Ease fadeOutEase = Ease.Linear,
                          Action onComplete = null)
         {
+            SetupIfNeeded();
+            
             bool playingAudioSource = HasPlaying(audioSource, out SoundEntity entityPlaying);
             bool pausedAudioSource = HasPaused(audioSource, out SoundEntity entityPaused);
 
@@ -572,6 +605,8 @@ namespace Devolfer.Sound
                                            Ease fadeOutEase = Ease.Linear,
                                            CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             bool playingEntity = HasPlaying(entity);
             bool pausedEntity = HasPaused(entity);
 
@@ -604,6 +639,8 @@ namespace Devolfer.Sound
                                            Ease fadeOutEase = Ease.Linear,
                                            CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             bool playingAudioSource = HasPlaying(audioSource, out SoundEntity entityPlaying);
             bool pausedAudioSource = HasPaused(audioSource, out SoundEntity entityPaused);
 
@@ -627,6 +664,8 @@ namespace Devolfer.Sound
         /// <remarks>Has no effect on sounds currently stopping.</remarks>
         public void PauseAll()
         {
+            SetupIfNeeded();
+            
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
             {
                 if (HasStopping(entity)) continue;
@@ -643,6 +682,8 @@ namespace Devolfer.Sound
         /// </summary>
         public void ResumeAll()
         {
+            SetupIfNeeded();
+            
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPaused)
             {
                 if (HasStopping(entity)) continue;
@@ -664,6 +705,8 @@ namespace Devolfer.Sound
                             float fadeOutDuration = 1,
                             Ease fadeOutEase = Ease.Linear)
         {
+            SetupIfNeeded();
+            
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
             {
                 Stop(entity, fadeOut, fadeOutDuration, fadeOutEase);
@@ -691,6 +734,8 @@ namespace Devolfer.Sound
                                               Ease fadeOutEase = Ease.Linear,
                                               CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             List<DynamicTask> stopTasks = new();
 
             foreach ((SoundEntity entity, AudioSource _) in _entitiesPlaying)
@@ -723,6 +768,8 @@ namespace Devolfer.Sound
                         Transform followTarget,
                         Vector3 position)
         {
+            SetupIfNeeded();
+            
             if (properties == null) return;
 
             entity.SetProperties(properties, followTarget, position);
@@ -742,6 +789,8 @@ namespace Devolfer.Sound
                         Transform followTarget,
                         Vector3 position)
         {
+            SetupIfNeeded();
+            
             if (properties == null) return;
 
             if (HasPaused(audioSource, out SoundEntity entityPaused))
@@ -771,6 +820,8 @@ namespace Devolfer.Sound
                          Ease ease = Ease.Linear,
                          Action onComplete = null)
         {
+            SetupIfNeeded();
+            
             if (!HasPlaying(entity)) return;
             if (HasStopping(entity)) return;
 
@@ -794,6 +845,8 @@ namespace Devolfer.Sound
                          Ease ease = Ease.Linear,
                          Action onComplete = null)
         {
+            SetupIfNeeded();
+            
             if (!HasPlaying(audioSource, out SoundEntity entityPlaying)) return;
             if (HasStopping(audioSource)) return;
 
@@ -818,6 +871,8 @@ namespace Devolfer.Sound
                                      Ease ease = Ease.Linear,
                                      CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             if (HasStopping(entity)) return default;
 
             if (HasPaused(entity)) Resume(entity);
@@ -841,6 +896,8 @@ namespace Devolfer.Sound
                                      Ease ease = Ease.Linear,
                                      CancellationToken cancellationToken = default)
         {
+            SetupIfNeeded();
+            
             if (!HasPlaying(audioSource, out SoundEntity entityPlaying)) return default;
             if (HasStopping(audioSource)) return default;
 
@@ -1228,6 +1285,8 @@ namespace Devolfer.Sound
         /// <remarks>Once registered, grants access through various methods like <see cref="SetMixerGroupVolume"/> or <see cref="FadeMixerGroupVolume"/>.</remarks>
         public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
         {
+            SetupIfNeeded();
+            
             if (!group.AudioMixer.HasParameter(group.ExposedParameter))
             {
                 Debug.LogError(
@@ -1246,6 +1305,8 @@ namespace Devolfer.Sound
         /// <param name="group">The group to be unregistered.</param>
         public void UnregisterMixerVolumeGroup(MixerVolumeGroup group)
         {
+            SetupIfNeeded();
+            
             _mixerVolumeGroups.Remove(group.ExposedParameter);
         }
 
@@ -1502,6 +1563,8 @@ namespace Devolfer.Sound
 
         private bool MixerVolumeGroupRegistered(string exposedParameter, out MixerVolumeGroup mixerVolumeGroup)
         {
+            SetupIfNeeded();
+            
             if (_mixerVolumeGroups.TryGetValue(exposedParameter, out mixerVolumeGroup)) return true;
 
             Debug.LogError($"There is no {nameof(MixerVolumeGroup)} for {exposedParameter} registered.");
@@ -1510,6 +1573,8 @@ namespace Devolfer.Sound
 
         private void StopMixerFading(string exposedParameter)
         {
+            SetupIfNeeded();
+            
 #if !UNITASK_INCLUDED
             if (_mixerFadeRoutines.Remove(exposedParameter, out Coroutine fadeRoutine))
             {

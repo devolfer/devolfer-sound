@@ -24,7 +24,6 @@ namespace Devolfer.Sound
         private void Awake()
         {
             _source = GetComponent<AudioSource>();
-            _source.enabled = false;
             _transform = transform;
 
             if (_source.playOnAwake) Play();
