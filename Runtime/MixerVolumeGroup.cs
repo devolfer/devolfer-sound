@@ -66,7 +66,7 @@ namespace Devolfer.Sound
         {
             _audioMixer = audioMixer;
             _exposedParameter = exposedParameter;
-            _volumeSegments = Mathf.Max(volumeSegments, 1);
+            _volumeSegments = volumeSegments;
 
             if (Application.isPlaying) Refresh();
         }

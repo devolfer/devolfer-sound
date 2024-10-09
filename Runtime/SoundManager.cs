@@ -1308,17 +1308,35 @@ namespace Devolfer.Sound
         public void RegisterMixerVolumeGroup(MixerVolumeGroup group)
         {
             SetupIfNeeded();
+
+            string exposedParameter = group.ExposedParameter;
             
-            if (!group.AudioMixer.HasParameter(group.ExposedParameter))
+            if (string.IsNullOrWhiteSpace(exposedParameter))
             {
                 Debug.LogError(
-                    $"You are trying to register a {nameof(MixerVolumeGroup)} with the non-existing exposed parameter " +
-                    $"{group.ExposedParameter} for the Audio Mixer {group.AudioMixer}. " +
-                    "Please add the necessary exposed parameter in the Audio Mixer in the Editor.");
+                    $"You are trying to register a {nameof(MixerVolumeGroup)} with an empty exposed parameter. " +
+                    "\nThis is not allowed.");
+                
+                return;
+            }
+            
+            if (!group.AudioMixer.HasParameter(exposedParameter))
+            {
+                Debug.LogError(
+                    $"You are trying to register a {nameof(MixerVolumeGroup)} with the exposed parameter " +
+                    $"'{exposedParameter}' for the Audio Mixer '{group.AudioMixer.name}'. " +
+                    "\nPlease expose the necessary parameter via the Editor or check your spelling.");
+                
                 return;
             }
 
-            _mixerVolumeGroups.TryAdd(group.ExposedParameter, group);
+            if (_mixerVolumeGroups.TryAdd(exposedParameter, group)) return;
+            
+            Debug.LogWarning(
+                $"You are trying to register a {nameof(MixerVolumeGroup)} with the exposed parameter " +
+                $"'{exposedParameter}' for the Audio Mixer '{group.AudioMixer.name}'. " +
+                "\nThe parameter was either already registered or you were trying to register it with multiple Audio Mixers." +
+                "\nIt is not allowed to use the same exposed parameter for different Audio Mixers.");
         }
 
         /// <summary>
