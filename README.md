@@ -331,8 +331,8 @@ Any other custom groups must be added under the `Groups` section by clicking the
 To let the `SoundManager` know, which `AudioMixer` volume groups it should manage, they have to be registered and unregistered.   
 This can be done via scripting or the Editor.
 
-This is straightforward by code, however the methods expect an instance of type `MixerVolumeGroup`.   
-It's a custom class that provides various functionality for handling a volume group in an `AudioMixer`.
+It is straightforward by code, however the methods expect an instance of type `MixerVolumeGroup`.   
+This is a custom class that provides various functionality for handling a volume group in an `AudioMixer`.
 
 ```csharp
 // Injects AudioMixer asset via Editor Inspector
@@ -356,7 +356,7 @@ Registering via Editor can be done through the [Sound Volume Mixer](#sound-volum
 
 For the latter, right-clicking in the `Hierarchy` or under `GameObject` and then `Audio -> Sound Manager` will create an instance.   
 
-<img width="364" alt="add-sound-manager" src="https://github.com/user-attachments/assets/6659a73b-b8d4-4b0b-8b0e-a3e37bf539df">
+<img width="362" alt="add-sound-manager" src="https://github.com/user-attachments/assets/a446a32f-6e96-4656-b78a-e9577d76cea9">
 
 Any groups can then be added in the list of `Mixer Volume Groups Default`.
 
@@ -420,7 +420,7 @@ Simplified linear cross-fading is also supported.
 It will fade out the first group to a volume of 0 and fade in the other to 1.   
 
 ```csharp
-// Fades volume of 'VolumeMusic' to 0 & fades in 'VolumeDialog' to volume of 1 over 1 second
+// Fades volume of 'VolumeMusic' out & fades in 'VolumeDialog' over 1 second
 SoundManager.Instance.CrossFadeMixerGroupVolumes("VolumeMusic", "VolumeDialog", 1f);
 
 // Same as above as async call
@@ -432,9 +432,25 @@ For any finer controlled cross-fading, it is recommended to call multiple fades 
 ## Available Components
 ### Sound Emitter
 
+<img width="362" alt="add-sound-emitter" src="https://github.com/user-attachments/assets/8828558b-41a5-4e56-ad3d-6c3d3785e2e1">
+
+<img width="406" alt="sound-emitter-overview" src="https://github.com/user-attachments/assets/0e3cb2fd-856c-412c-b289-613c36ea3436">
+
+<img width="406" alt="sound-emitter-configuration-play" src="https://github.com/user-attachments/assets/db4ab53b-8a72-424d-ac8a-79b73ae731fb">
+
+<img width="406" alt="sound-emitter-configuration-stop" src="https://github.com/user-attachments/assets/fc316f2d-2fa8-4e8b-82f8-79e2c43741b3">
+
+<img width="406" alt="sound-emitter-configuration-fade" src="https://github.com/user-attachments/assets/e5cd2e3f-3f4b-4392-939e-f0bb1dad0eda">
 
 ### Sound Volume Mixer
 
+<img width="363" alt="add-sound-volume-mixer" src="https://github.com/user-attachments/assets/eca71cd0-d8e8-44b7-ae38-e01374ed1014">
+
+<img width="405" alt="sound-volume-mixer-overview" src="https://github.com/user-attachments/assets/7d1cccf6-cb8c-429f-bf8c-e2d11d0a3097">
+
+<img width="405" alt="sound-volume-mixer-group" src="https://github.com/user-attachments/assets/0e67f4b8-1291-4f85-a312-75633eb47ca2">
+
+<img width="405" alt="sound-volume-mixer-configuration-fade" src="https://github.com/user-attachments/assets/3e55daf6-a114-427c-b55a-0cefe3eb18cc">
 
 ## License
 
