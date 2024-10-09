@@ -5,7 +5,7 @@ using UnityEngine.Events;
 namespace Devolfer.Sound
 {
     /// <summary>
-    /// Propagates properties of an <see cref="AudioSource"/> to the <see cref="SoundManager"/> and handles playback via a <see cref="SoundEntity"/>.
+    /// Allows playback of an <see cref="AudioSource"/> through the <see cref="SoundManager"/>.
     /// </summary>
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour
